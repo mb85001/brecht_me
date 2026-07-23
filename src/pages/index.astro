@@ -10,7 +10,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 //   • Text    → replace the bracketed [ … ] placeholders inline below.
 // ─────────────────────────────────────────────────────────────────────────
 
-const galleries = [1, 2, 3, 4];
+const galleries = [1, 2, 3, 4, 5, 6];
 ---
 
 <BaseLayout>
@@ -600,7 +600,7 @@ const galleries = [1, 2, 3, 4];
     /* ---------- Gallery ---------- */
     .gallery {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 0.9rem;
     }
     .gal {

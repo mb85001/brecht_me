@@ -15,3 +15,6 @@ node_modules/
 
 # logs
 npm-debug.log*
+
+# original photos — web-optimized copies live in public/images
+/photos/
