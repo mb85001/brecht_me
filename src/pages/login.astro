@@ -28,8 +28,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       </form>
 
       <p class="hint">
-        No account yet? Ask Matthias to create one for you, or
-        <button type="button" id="signup-toggle" class="linkbtn">register a new one</button>.
+        Accounts are created by invitation only.
+        <a class="linkbtn" href="mailto:mb@brecht.me?subject=brecht.me%20account%20request">Request an account →</a>
       </p>
     </div>
   </div>
@@ -122,9 +122,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const passEl = document.getElementById('password') as HTMLInputElement;
     const submit = document.getElementById('submit') as HTMLButtonElement;
     const msg = document.getElementById('msg') as HTMLParagraphElement;
-    const signupToggle = document.getElementById('signup-toggle')!;
-
-    let mode: 'signin' | 'signup' = 'signin';
 
     function setMsg(text: string, kind: '' | 'error' | 'ok' = '') {
       msg.textContent = text;
@@ -143,33 +140,25 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       location.replace(safe);
     }
 
-    signupToggle.addEventListener('click', () => {
-      mode = mode === 'signin' ? 'signup' : 'signin';
-      submit.textContent = mode === 'signup' ? 'Create account' : 'Sign in';
-      signupToggle.textContent =
-        mode === 'signup' ? 'use an existing one' : 'register a new one';
-      setMsg('');
-    });
-
+    // Sign-in only. Accounts are created by the site owner in the Supabase
+    // dashboard — there is deliberately no sign-up path in this UI, and
+    // sign-ups are disabled server-side too (see README).
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       submit.disabled = true;
-      setMsg('Working…');
+      setMsg('Signing in…');
       const email = emailEl.value.trim();
       const password = passEl.value;
 
-      const { error } =
-        mode === 'signup'
-          ? await supabase.auth.signUp({ email, password })
-          : await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
       submit.disabled = false;
       if (error) {
         setMsg(error.message, 'error');
         return;
-      }
-      if (mode === 'signup') {
-        setMsg('Account created. Check your email if confirmation is on.', 'ok');
       }
       const { data } = await supabase.auth.getSession();
       if (data.session) redirectNext();

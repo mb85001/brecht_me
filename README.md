@@ -46,13 +46,30 @@ npm run dev               # http://localhost:4321
 1. In Supabase, open **SQL Editor → New query**.
 2. Paste the contents of [`supabase/schema.sql`](supabase/schema.sql) and click **Run**.
 
-### 3. Auth settings
-- **Authentication → Providers → Email** is on by default (email + password).
-- To skip the confirmation email while setting up, turn **off**
-  **Authentication → Providers → Email → Confirm email** so you can log in
-  immediately.
-- For a private site you can turn **off** open sign-ups later
-  (**Authentication → Sign-ups**) once your account exists.
+### 3. Auth settings — invite only
+
+This site is **sign-in only**. There is no sign-up form, and accounts are
+created by hand. Two things make that real:
+
+1. **Disable sign-ups server-side (required).** Removing the UI button is not
+   enough — anyone holding the publishable key could still call the sign-up
+   endpoint directly. In Supabase go to
+   **Authentication → Sign In / Providers → Email** and turn **off**
+   *Allow new users to sign up*.
+2. **Turn off email confirmation** (optional, convenient) under the same Email
+   provider settings, so accounts you create can log in immediately.
+
+### Creating an account for someone
+
+When you get a request (the login page has a "Request an account" mail link):
+
+1. Supabase dashboard → **Authentication → Users** → **Add user**.
+2. Choose **Create new user**, enter their email and a password, and tick
+   *Auto Confirm User* so they can sign in right away.
+3. Send them the password and ask them to change it later.
+
+This cannot be done from the website itself: creating users requires the
+`service_role` secret key, which must never be shipped to a browser.
 
 ### 4. GitHub repo + Pages
 1. Create a GitHub repo and push this folder to `main`.
