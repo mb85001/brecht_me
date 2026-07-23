@@ -1,13 +1,12 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 
-// ── How this page works ──────────────────────────────────────────────────
-// Nothing here is invented about you. Every section carries a short GUIDE
-// sentence describing what belongs there, plus PLACEHOLDERS for the real text
-// and photos you'll add:
-//   • Photos  → drop files into /public/images (see public/images/README.md).
-//               Until a file exists, a labelled underwater placeholder shows.
-//   • Text    → replace the bracketed [ … ] placeholders inline below.
+// ── Editing this page ────────────────────────────────────────────────────
+// Photos come from /public/images (see public/images/README.md for the slot
+// names and how to re-crop). If an image file is missing, the page falls back
+// to a labelled placeholder instead of a broken image.
+// The gallery is driven by the `galleries` array below — add a number and a
+// matching /public/images/gallery-N.jpg to extend it.
 // ─────────────────────────────────────────────────────────────────────────
 
 const galleries = [1, 2, 3, 4, 5, 6];
@@ -24,14 +23,12 @@ const galleries = [1, 2, 3, 4, 5, 6];
     <nav class="nav-links">
       <a href="#about">About</a>
       <a href="#gallery">Gallery</a>
-      <a href="#connect">Connect</a>
       <a href="/app" class="btn btn-ghost nav-cta">Private area →</a>
     </nav>
   </header>
 
   <main>
     <!-- ══════════ HERO ══════════ -->
-    <!-- GUIDE: A full-screen underwater photo with your name and one-line tagline. -->
     <section class="hero" id="top">
       <figure class="ph hero-photo" data-hint="Full-screen hero — wide, sunlit underwater scene (reef, blue water, or a diver silhouette)">
         <img src="/images/hero.jpg" alt="" fetchpriority="high" />
@@ -41,17 +38,19 @@ const galleries = [1, 2, 3, 4, 5, 6];
       <div class="caustics" aria-hidden="true"></div>
 
       <div class="hero-content wrap">
-        <p class="eyebrow reveal"><span class="ping"></span> [ Short kicker — e.g. your role or location ]</p>
+        <p class="eyebrow reveal">
+          <span class="ping"></span> Scuba diving · Music · Technology · Gaming
+        </p>
         <h1 class="reveal">
-          <span class="ph-text">[ Your name ]</span>
+          <span class="ph-text">Welcome to my corner of the ocean.</span>
         </h1>
         <p class="lead reveal">
-          [ One or two lines about who you are and what this site is. Keep it
-          human and short. ]
+          This is where I keep the things I care about — time underwater, good
+          music, and the technology I work with by day. Have a look around; the
+          dive logbook lives behind the login.
         </p>
         <div class="hero-cta reveal">
           <a href="#about" class="btn btn-primary"><span>Explore</span></a>
-          <a href="/app" class="btn btn-glass">Private area</a>
         </div>
       </div>
 
@@ -59,16 +58,11 @@ const galleries = [1, 2, 3, 4, 5, 6];
     </section>
 
     <!-- ══════════ INTRO LINE ══════════ -->
-    <!-- GUIDE: One big statement line — your mission or what you're about. -->
     <section class="statement wrap reveal">
-      <p>
-        [ One bold sentence that sums you up — your work, the ocean, or both.
-        This is the line people remember. ]
-      </p>
+      <p>Systems by day. Reefs whenever possible.</p>
     </section>
 
     <!-- ══════════ ABOUT ══════════ -->
-    <!-- GUIDE: A short intro paragraph plus a photo of you. -->
     <section id="about" class="section wrap">
       <div class="split">
         <figure class="ph portrait reveal" data-hint="A portrait of you — ideally underwater or dive-related">
@@ -77,23 +71,23 @@ const galleries = [1, 2, 3, 4, 5, 6];
         </figure>
         <div class="split-text reveal">
           <p class="eyebrow">About</p>
-          <h2>[ A few words about you ]</h2>
+          <h2>Diver by passion, IT lead by trade</h2>
           <p class="muted">
-            [ Two or three sentences introducing yourself: what you do, what
-            you love about diving, and what visitors will find here. Write it in
-            your own voice. ]
+            I'm an Advanced Open Water Diver who spends the working week as a
+            global team lead in IT, mostly around SAP MM and purchasing topics.
+            When I'm not deep in procurement systems, I'm usually planning the
+            next trip somewhere with good visibility.
           </p>
           <ul class="facts">
-            <li><span>[ Label ]</span> [ e.g. what you do ]</li>
-            <li><span>[ Label ]</span> [ e.g. certification / favourite site ]</li>
-            <li><span>[ Label ]</span> [ e.g. where you're based ]</li>
+            <li><span>Diving</span> Advanced Open Water Diver (AOWD)</li>
+            <li><span>Day job</span> Global team lead — SAP MM &amp; Purchasing IT</li>
+            <li><span>Favourites</span> Raja Ampat · Citrus Ridge</li>
           </ul>
         </div>
       </div>
     </section>
 
     <!-- ══════════ FEATURED ══════════ -->
-    <!-- GUIDE: Highlight one thing — a dive, a trip, a project — with a big photo. -->
     <section class="section wrap">
       <div class="split reverse">
         <figure class="ph feature reveal" data-hint="A big photo of the dive, trip, or project you most want to highlight">
@@ -102,25 +96,24 @@ const galleries = [1, 2, 3, 4, 5, 6];
         </figure>
         <div class="split-text reveal">
           <p class="eyebrow">Featured</p>
-          <h2>[ Title of the thing you're highlighting ]</h2>
+          <h2>Anemone in bloom, Egypt</h2>
           <p class="muted">
-            [ A short paragraph about it — what it is, why it matters to you, and
-            a link if there is one. ]
+            Shot on a reef in Egypt: a magenta anemone with its tentacles fully
+            extended, and a clownfish tucked somewhere in the middle. The Red Sea
+            has a habit of producing colour like this exactly when you've stopped
+            looking for it.
           </p>
-          <a href="#" class="text-link">[ Optional link → ]</a>
         </div>
       </div>
     </section>
 
     <!-- ══════════ GALLERY ══════════ -->
-    <!-- GUIDE: A grid of your favourite underwater photos. -->
     <section id="gallery" class="section wrap">
       <div class="section-head reveal">
         <p class="eyebrow">Gallery</p>
-        <h2>[ Section title — e.g. From the deep ]</h2>
+        <h2>From the deep</h2>
         <p class="muted head-sub">
-          [ One line introducing your photos — where they're from, or what
-          you love shooting. ]
+          Clownfish, anemones, and a few moments from above the surface too.
         </p>
       </div>
       <div class="gallery">
@@ -129,45 +122,16 @@ const galleries = [1, 2, 3, 4, 5, 6];
             <figure class="ph gal reveal" data-hint={`Gallery photo ${n} — a favourite underwater shot`}>
               <img src={`/images/gallery-${n}.jpg`} alt="" loading="lazy" />
               <span class="ph-hint" />
-              <figcaption class="gal-cap">[ Caption {n} — place & moment ]</figcaption>
             </figure>
           ))
         }
       </div>
     </section>
 
-    <!-- ══════════ PRIVATE AREA ══════════ -->
-    <section class="section wrap reveal">
-      <div class="cta-band">
-        <div class="caustics soft" aria-hidden="true"></div>
-        <div class="cta-inner">
-          <div>
-            <p class="eyebrow">Private</p>
-            <h2>Your dive logbook</h2>
-            <p class="muted">Your dive logs, synced with the app and secured behind login.</p>
-          </div>
-          <a href="/app" class="btn btn-primary"><span>Enter private area →</span></a>
-        </div>
-      </div>
-    </section>
-
-    <!-- ══════════ CONNECT ══════════ -->
-    <!-- GUIDE: How people reach you. -->
-    <section id="connect" class="section wrap connect reveal">
-      <p class="eyebrow">Connect</p>
-      <h2>[ Get in touch ]</h2>
-      <p class="muted connect-lead">
-        [ One line inviting people to reach out. ]
-      </p>
-      <div class="connect-links">
-        <a class="btn btn-primary" href="mailto:[ your@email ]"><span>[ your@email ]</span></a>
-        <a class="btn btn-ghost" href="#">[ Social / other link ]</a>
-      </div>
-    </section>
   </main>
 
   <footer class="wrap footer">
-    <span>© {new Date().getFullYear()} [ Your name ]</span>
+    <span>© {new Date().getFullYear()} Matthias Brecht</span>
     <span class="footer-dot">·</span>
     <span>Built with Astro, hosted on GitHub Pages</span>
   </footer>
@@ -324,10 +288,6 @@ const galleries = [1, 2, 3, 4, 5, 6];
       filter: blur(6px);
       animation: caustic 14s ease-in-out infinite alternate;
     }
-    .caustics.soft {
-      opacity: 0.35;
-      z-index: 0;
-    }
     @keyframes caustic {
       to {
         transform: translate3d(4%, 3%, 0) scale(1.1);
@@ -381,30 +341,12 @@ const galleries = [1, 2, 3, 4, 5, 6];
       position: relative;
       z-index: 1;
     }
-    .btn-glass {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      color: #fff;
-      backdrop-filter: blur(8px);
-    }
-    .btn-glass:hover {
-      background: rgba(255, 255, 255, 0.16);
-    }
-
-    /* placeholder text style — clearly “to be replaced”, still tidy */
     .ph-text {
       color: #fff;
     }
     h1 .ph-text,
     h2 {
       letter-spacing: -0.02em;
-    }
-    /* bracketed placeholders read as muted guidance */
-    .lead,
-    .muted,
-    .facts,
-    .gal-cap,
-    .connect-lead {
     }
 
     .scroll-hint {
@@ -575,16 +517,6 @@ const galleries = [1, 2, 3, 4, 5, 6];
       min-width: 8ch;
       font-weight: 600;
     }
-    .text-link {
-      display: inline-block;
-      margin-top: 1.2rem;
-      color: var(--accent);
-      border-bottom: 1px solid transparent;
-      transition: border-color 0.2s var(--ease);
-    }
-    .text-link:hover {
-      border-bottom-color: var(--accent);
-    }
     @media (max-width: 760px) {
       .split {
         grid-template-columns: 1fr;
@@ -616,65 +548,10 @@ const galleries = [1, 2, 3, 4, 5, 6];
     .gal:hover img {
       transform: scale(1.06);
     }
-    .gal-cap {
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      z-index: 2;
-      padding: 1.5rem 0.9rem 0.7rem;
-      font-size: 0.78rem;
-      color: #eaf3f6;
-      background: linear-gradient(to top, rgba(3, 12, 20, 0.8), transparent);
-      opacity: 0;
-      transform: translateY(6px);
-      transition: opacity 0.3s var(--ease), transform 0.3s var(--ease);
-    }
-    .gal:hover .gal-cap {
-      opacity: 1;
-      transform: none;
-    }
     @media (max-width: 760px) {
       .gallery {
         grid-template-columns: repeat(2, 1fr);
       }
-    }
-
-    /* ---------- Private CTA band ---------- */
-    .cta-band {
-      position: relative;
-      overflow: hidden;
-      border-radius: var(--radius);
-      border: 1px solid var(--surface-border);
-      background: linear-gradient(135deg, #0d3a48, #0a2338 70%);
-      padding: clamp(1.6rem, 1rem + 3vw, 3rem);
-    }
-    .cta-inner {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1.5rem;
-      flex-wrap: wrap;
-    }
-    .cta-band h2 {
-      margin: 0.3rem 0;
-      color: #eaf6f8;
-    }
-
-    /* ---------- Connect ---------- */
-    .connect h2 {
-      margin: 0.4rem 0;
-    }
-    .connect-lead {
-      max-width: 42ch;
-    }
-    .connect-links {
-      display: flex;
-      gap: 0.8rem;
-      flex-wrap: wrap;
-      margin-top: 1.4rem;
     }
 
     /* ---------- Footer ---------- */
