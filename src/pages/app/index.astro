@@ -1,0 +1,148 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+---
+
+<AppLayout title="Overview · brecht.me" active="home">
+  <header class="page-head">
+    <p class="eyebrow">Private area</p>
+    <h1 id="greeting">Welcome back</h1>
+    <p class="muted">Everything below is yours, secured by your login.</p>
+  </header>
+
+  <section class="tiles">
+    <a href="/app/dives" class="card tile">
+      <span class="tile-ic">🌊</span>
+      <span class="tile-num" id="dive-count">—</span>
+      <span class="tile-label">dives logged</span>
+    </a>
+    <div class="card tile">
+      <span class="tile-ic">📱</span>
+      <span class="tile-num">Sync</span>
+      <span class="tile-label">shared with the DiveScan app</span>
+    </div>
+  </section>
+
+  <section class="card recent">
+    <h2>Recent dives</h2>
+    <ul id="recent-list" class="recent-list">
+      <li class="muted">Loading…</li>
+    </ul>
+  </section>
+
+  <style>
+    .page-head {
+      margin-bottom: 2rem;
+    }
+    .page-head h1 {
+      font-size: var(--step-3);
+      margin: 0.4rem 0;
+    }
+    .muted {
+      color: var(--text-muted);
+    }
+    .tiles {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .tile {
+      display: grid;
+      gap: 0.3rem;
+      text-decoration: none;
+      transition: transform 0.25s var(--ease), border-color 0.25s var(--ease);
+    }
+    a.tile:hover {
+      transform: translateY(-3px);
+      border-color: var(--accent);
+    }
+    .tile-ic {
+      font-size: 1.5rem;
+    }
+    .tile-num {
+      font-size: var(--step-2);
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .tile-label {
+      color: var(--text-muted);
+      font-size: var(--step--1);
+    }
+    .recent h2 {
+      font-size: var(--step-1);
+      margin: 0 0 1rem;
+    }
+    .recent-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 0.6rem;
+    }
+    .recent-list li {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.7rem 0;
+      border-bottom: 1px solid var(--surface-border);
+      font-size: var(--step--1);
+    }
+    .recent-list li:last-child {
+      border-bottom: none;
+    }
+    @media (max-width: 720px) {
+      .tiles {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+  <script>
+    import { supabase } from '../../lib/supabase';
+
+    (async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const greeting = document.getElementById('greeting');
+      const name = session.user.email?.split('@')[0] ?? '';
+      if (greeting) greeting.textContent = `Welcome back, ${name}`;
+
+      // Dive count + recent dives
+      const { count } = await supabase
+        .from('dives')
+        .select('*', { count: 'exact', head: true });
+      const countEl = document.getElementById('dive-count');
+      if (countEl) countEl.textContent = String(count ?? 0);
+
+      const { data: recent } = await supabase
+        .from('dives')
+        .select('dive_number, date, site_name, max_depth_meters')
+        .order('date', { ascending: false })
+        .limit(5);
+
+      const list = document.getElementById('recent-list')!;
+      if (!recent || recent.length === 0) {
+        list.innerHTML =
+          '<li class="muted">No dives yet — add your first from the Dive logs page.</li>';
+      } else {
+        list.innerHTML = recent
+          .map((d: any) => {
+            const date = d.date ? new Date(d.date).toLocaleDateString() : '—';
+            const depth = d.max_depth_meters ? `${d.max_depth_meters} m` : '';
+            const num = d.dive_number ? `#${d.dive_number} · ` : '';
+            return `<li><span>${num}${escapeHtml(d.site_name ?? 'Untitled site')}</span><span class="muted">${date} ${depth}</span></li>`;
+          })
+          .join('');
+      }
+    })();
+
+    function escapeHtml(s: string) {
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+  </script>
+</AppLayout>

@@ -1,0 +1,265 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+---
+
+<AppLayout title="Dive logs · brecht.me" active="dives">
+  <header class="page-head">
+    <div>
+      <p class="eyebrow">Logbook</p>
+      <h1>Dive logs</h1>
+    </div>
+    <button class="btn btn-primary" id="new-dive">+ New dive</button>
+  </header>
+
+  <p class="muted intro">
+    The same logbook the DiveScan app syncs to. Only you can see these entries.
+  </p>
+
+  <!-- Add / edit form -->
+  <form class="card dive-form" id="dive-form" hidden>
+    <div class="grid">
+      <label>Dive #<input type="number" id="f-number" min="1" /></label>
+      <label>Date<input type="date" id="f-date" required /></label>
+      <label class="span2">Site name<input type="text" id="f-site" placeholder="e.g. Blue Hole" /></label>
+      <label>Max depth (m)<input type="number" id="f-depth" step="0.1" min="0" /></label>
+      <label>Bottom time (min)<input type="number" id="f-bottom" min="0" /></label>
+      <label>Buddy<input type="text" id="f-buddy" /></label>
+      <label>Water temp (°C)<input type="number" id="f-temp" step="0.1" /></label>
+      <label class="span2">Notes<textarea id="f-notes" rows="2"></textarea></label>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary" id="save-dive">Save dive</button>
+      <button type="button" class="btn btn-ghost" id="cancel-dive">Cancel</button>
+      <span class="msg" id="dive-msg"></span>
+    </div>
+  </form>
+
+  <ul id="dives" class="dive-list">
+    <li class="muted">Loading…</li>
+  </ul>
+
+  <style>
+    .page-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 0.5rem;
+    }
+    .page-head h1 {
+      font-size: var(--step-3);
+      margin: 0.3rem 0 0;
+    }
+    .muted {
+      color: var(--text-muted);
+    }
+    .intro {
+      margin: 0 0 1.5rem;
+      font-size: var(--step--1);
+    }
+    .dive-form {
+      margin-bottom: 1.5rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.9rem;
+    }
+    .grid label {
+      display: grid;
+      gap: 0.35rem;
+      font-size: var(--step--1);
+      color: var(--text-muted);
+    }
+    .span2 {
+      grid-column: 1 / -1;
+    }
+    input,
+    textarea {
+      padding: 0.6rem 0.75rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--surface-border);
+      background: var(--bg);
+      color: var(--text);
+      font: inherit;
+    }
+    input:focus,
+    textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .form-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      margin-top: 1.1rem;
+    }
+    .msg {
+      font-size: var(--step--1);
+    }
+    .msg.error {
+      color: #f87171;
+    }
+    .dive-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 0.8rem;
+    }
+    .dive-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1rem 1.2rem;
+      background: var(--bg-elev);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius);
+      transition: border-color 0.2s var(--ease);
+    }
+    .dive-item:hover {
+      border-color: var(--accent);
+    }
+    .dive-main {
+      display: grid;
+      gap: 0.2rem;
+    }
+    .dive-title {
+      font-weight: 600;
+    }
+    .dive-meta {
+      color: var(--text-muted);
+      font-size: var(--step--1);
+    }
+    .dive-depth {
+      text-align: right;
+      color: var(--accent);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .del {
+      background: none;
+      border: none;
+      color: var(--text-faint);
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 0.2rem 0.4rem;
+    }
+    .del:hover {
+      color: #f87171;
+    }
+    @media (max-width: 560px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+  <script>
+    import { supabase } from '../../lib/supabase';
+
+    const form = document.getElementById('dive-form') as HTMLFormElement;
+    const list = document.getElementById('dives')!;
+    const msg = document.getElementById('dive-msg')!;
+    const el = (id: string) => document.getElementById(id) as HTMLInputElement;
+
+    document.getElementById('new-dive')!.addEventListener('click', () => {
+      form.hidden = !form.hidden;
+      if (!form.hidden) el('f-date').focus();
+    });
+    document.getElementById('cancel-dive')!.addEventListener('click', () => {
+      form.reset();
+      form.hidden = true;
+      msg.textContent = '';
+    });
+
+    async function load() {
+      const { data, error } = await supabase
+        .from('dives')
+        .select(
+          'id, dive_number, date, site_name, max_depth_meters, bottom_time_minutes, buddy, water_temp_celsius, notes'
+        )
+        .order('date', { ascending: false });
+
+      if (error) {
+        list.innerHTML = `<li class="muted">Could not load dives: ${escapeHtml(error.message)}</li>`;
+        return;
+      }
+      if (!data || data.length === 0) {
+        list.innerHTML =
+          '<li class="muted">No dives yet. Click “New dive” to add one.</li>';
+        return;
+      }
+      list.innerHTML = data
+        .map((d: any) => {
+          const date = d.date ? new Date(d.date).toLocaleDateString() : '—';
+          const bt = d.bottom_time_minutes
+            ? ` · ${d.bottom_time_minutes} min`
+            : '';
+          const buddy = d.buddy ? ` · with ${escapeHtml(d.buddy)}` : '';
+          const num = d.dive_number ? `#${d.dive_number} ` : '';
+          return `<li class="dive-item">
+            <div class="dive-main">
+              <span class="dive-title">${num}${escapeHtml(d.site_name ?? 'Untitled site')}</span>
+              <span class="dive-meta">${date}${bt}${buddy}</span>
+            </div>
+            <span class="dive-depth">${d.max_depth_meters ? d.max_depth_meters + ' m' : ''}</span>
+            <button class="del" data-id="${d.id}" title="Delete">✕</button>
+          </li>`;
+        })
+        .join('');
+
+      list.querySelectorAll('.del').forEach((b) =>
+        b.addEventListener('click', async (e) => {
+          const id = (e.currentTarget as HTMLElement).dataset.id!;
+          if (!confirm('Delete this dive?')) return;
+          await supabase.from('dives').delete().eq('id', id);
+          load();
+        })
+      );
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msg.textContent = 'Saving…';
+      msg.className = 'msg';
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const num = (v: string) => (v === '' ? null : Number(v));
+      const row = {
+        user_id: session.user.id,
+        dive_number: num(el('f-number').value),
+        date: el('f-date').value || null,
+        site_name: el('f-site').value || null,
+        max_depth_meters: num(el('f-depth').value),
+        bottom_time_minutes: num(el('f-bottom').value),
+        buddy: el('f-buddy').value || null,
+        water_temp_celsius: num(el('f-temp').value),
+        notes: (document.getElementById('f-notes') as HTMLTextAreaElement).value || null,
+      };
+
+      const { error } = await supabase.from('dives').insert(row);
+      if (error) {
+        msg.textContent = error.message;
+        msg.className = 'msg error';
+        return;
+      }
+      form.reset();
+      form.hidden = true;
+      msg.textContent = '';
+      load();
+    });
+
+    function escapeHtml(s: string) {
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    load();
+  </script>
+</AppLayout>

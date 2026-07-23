@@ -1,0 +1,178 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Sign in · brecht.me" description="Private area sign in.">
+  <div class="auth-wrap">
+    <a href="/" class="back">← brecht.me</a>
+    <div class="card auth-card">
+      <p class="eyebrow">Private area</p>
+      <h1>Sign in</h1>
+      <p class="sub">Your dive logbook lives in here.</p>
+
+      <form id="auth-form">
+        <label>
+          Email
+          <input type="email" id="email" autocomplete="email" required
+            placeholder="you@example.com" />
+        </label>
+        <label>
+          Password
+          <input type="password" id="password" autocomplete="current-password"
+            required minlength="6" placeholder="••••••••" />
+        </label>
+        <button type="submit" class="btn btn-primary" id="submit">
+          Sign in
+        </button>
+        <p class="msg" id="msg" role="status"></p>
+      </form>
+
+      <p class="hint">
+        No account yet? Ask Matthias to create one for you, or
+        <button type="button" id="signup-toggle" class="linkbtn">register a new one</button>.
+      </p>
+    </div>
+  </div>
+
+  <style>
+    .auth-wrap {
+      min-height: 100dvh;
+      display: grid;
+      place-content: center;
+      gap: 1rem;
+      padding: 1.5rem;
+    }
+    .back {
+      color: var(--text-muted);
+      font-size: var(--step--1);
+      justify-self: center;
+    }
+    .back:hover {
+      color: var(--text);
+    }
+    .auth-card {
+      width: min(100%, 26rem);
+    }
+    .auth-card h1 {
+      font-size: var(--step-2);
+      margin: 0.4rem 0;
+    }
+    .sub {
+      color: var(--text-muted);
+      margin: 0 0 1.6rem;
+    }
+    form {
+      display: grid;
+      gap: 1rem;
+    }
+    label {
+      display: grid;
+      gap: 0.4rem;
+      font-size: var(--step--1);
+      color: var(--text-muted);
+    }
+    input {
+      padding: 0.75rem 0.9rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--surface-border);
+      background: var(--bg);
+      color: var(--text);
+      font-size: var(--step-0);
+    }
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    #submit {
+      justify-content: center;
+      margin-top: 0.4rem;
+    }
+    .msg {
+      margin: 0;
+      font-size: var(--step--1);
+      min-height: 1.2em;
+    }
+    .msg.error {
+      color: #f87171;
+    }
+    .msg.ok {
+      color: var(--accent);
+    }
+    .hint {
+      margin-top: 1.4rem;
+      font-size: var(--step--1);
+      color: var(--text-faint);
+    }
+    .linkbtn {
+      background: none;
+      border: none;
+      color: var(--accent);
+      cursor: pointer;
+      font: inherit;
+      padding: 0;
+      text-decoration: underline;
+    }
+  </style>
+
+  <script>
+    import { supabase } from '../lib/supabase';
+
+    const form = document.getElementById('auth-form') as HTMLFormElement;
+    const emailEl = document.getElementById('email') as HTMLInputElement;
+    const passEl = document.getElementById('password') as HTMLInputElement;
+    const submit = document.getElementById('submit') as HTMLButtonElement;
+    const msg = document.getElementById('msg') as HTMLParagraphElement;
+    const signupToggle = document.getElementById('signup-toggle')!;
+
+    let mode: 'signin' | 'signup' = 'signin';
+
+    function setMsg(text: string, kind: '' | 'error' | 'ok' = '') {
+      msg.textContent = text;
+      msg.className = 'msg' + (kind ? ' ' + kind : '');
+    }
+
+    // If already signed in, skip the form.
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) redirectNext();
+    });
+
+    function redirectNext() {
+      const params = new URLSearchParams(location.search);
+      const next = params.get('next');
+      const safe = next && next.startsWith('/') ? next : '/app';
+      location.replace(safe);
+    }
+
+    signupToggle.addEventListener('click', () => {
+      mode = mode === 'signin' ? 'signup' : 'signin';
+      submit.textContent = mode === 'signup' ? 'Create account' : 'Sign in';
+      signupToggle.textContent =
+        mode === 'signup' ? 'use an existing one' : 'register a new one';
+      setMsg('');
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      submit.disabled = true;
+      setMsg('Working…');
+      const email = emailEl.value.trim();
+      const password = passEl.value;
+
+      const { error } =
+        mode === 'signup'
+          ? await supabase.auth.signUp({ email, password })
+          : await supabase.auth.signInWithPassword({ email, password });
+
+      submit.disabled = false;
+      if (error) {
+        setMsg(error.message, 'error');
+        return;
+      }
+      if (mode === 'signup') {
+        setMsg('Account created. Check your email if confirmation is on.', 'ok');
+      }
+      const { data } = await supabase.auth.getSession();
+      if (data.session) redirectNext();
+    });
+  </script>
+</BaseLayout>

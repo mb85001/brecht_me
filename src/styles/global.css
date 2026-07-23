@@ -1,0 +1,183 @@
+/* ============================================================
+   brecht.me — design system
+   A small, deliberate set of tokens. Fluid type, generous
+   whitespace, calm dark-first palette with a light mode.
+   ============================================================ */
+
+:root {
+  /* Palette — dark first */
+  --bg: #0b0d12;
+  --bg-elev: #12151d;
+  --bg-elev-2: #191d28;
+  --surface-border: #262b39;
+  --text: #eef1f7;
+  --text-muted: #9aa3b6;
+  --text-faint: #6b7385;
+
+  /* Brand accent — an oceanic teal→indigo, a nod to the dives */
+  --accent: #4fd1c5;
+  --accent-2: #6366f1;
+  --accent-soft: rgba(79, 209, 197, 0.14);
+
+  /* Fluid type scale (clamp: min, preferred, max) */
+  --step--1: clamp(0.83rem, 0.78rem + 0.24vw, 0.95rem);
+  --step-0: clamp(1rem, 0.94rem + 0.3vw, 1.15rem);
+  --step-1: clamp(1.2rem, 1.08rem + 0.6vw, 1.6rem);
+  --step-2: clamp(1.5rem, 1.26rem + 1.2vw, 2.35rem);
+  --step-3: clamp(1.9rem, 1.4rem + 2.5vw, 3.4rem);
+  --step-4: clamp(2.6rem, 1.6rem + 5vw, 5.5rem);
+
+  /* Spacing / radius / motion */
+  --space: clamp(1rem, 0.8rem + 1vw, 1.6rem);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --maxw: 68rem;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+  --font-display: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    sans-serif;
+
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --bg: #f7f8fb;
+  --bg-elev: #ffffff;
+  --bg-elev-2: #f0f2f7;
+  --surface-border: #e2e6ef;
+  --text: #12151d;
+  --text-muted: #55607a;
+  --text-faint: #8a94aa;
+  --accent: #0d9488;
+  --accent-2: #4f46e5;
+  --accent-soft: rgba(13, 148, 136, 0.1);
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* The `hidden` attribute must always win, even over components that set their
+   own `display` (e.g. the auth-gated app shell uses `display: grid`). Without
+   this, `[hidden]` is silently overridden and gated UI leaks into view. */
+[hidden] {
+  display: none !important;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--step-0);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  margin: 0;
+  font-weight: 650;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.wrap {
+  width: min(100% - 2.5rem, var(--maxw));
+  margin-inline: auto;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.15rem;
+  border-radius: var(--radius-sm);
+  font-weight: 550;
+  font-size: var(--step--1);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.2s var(--ease), background 0.2s var(--ease),
+    border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+.btn:hover {
+  transform: translateY(-2px);
+}
+.btn-primary {
+  background: linear-gradient(120deg, var(--accent), var(--accent-2));
+  color: #071013;
+  font-weight: 650;
+  box-shadow: 0 8px 30px -12px var(--accent);
+}
+.btn-ghost {
+  border-color: var(--surface-border);
+  background: var(--bg-elev);
+  color: var(--text);
+}
+.btn-ghost:hover {
+  border-color: var(--accent);
+}
+
+/* Scroll-reveal */
+.reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.7s var(--ease), transform 0.7s var(--ease);
+}
+.reveal.in {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .btn:hover {
+    transform: none;
+  }
+}
+
+/* Focus visibility for keyboard users */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.card {
+  background: var(--bg-elev);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius);
+  padding: clamp(1.1rem, 0.9rem + 1vw, 1.8rem);
+}
+
+.eyebrow {
+  font-size: var(--step--1);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 600;
+}

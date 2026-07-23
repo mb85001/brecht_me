@@ -1,0 +1,176 @@
+---
+import BaseLayout from './BaseLayout.astro';
+
+interface Props {
+  title?: string;
+  active?: 'home' | 'dives';
+}
+const { title = 'Private area · brecht.me', active = 'home' } = Astro.props;
+---
+
+<BaseLayout title={title}>
+  <div class="app-shell" data-app-shell hidden>
+    <aside class="app-nav">
+      <a href="/" class="app-brand">brecht<span>.me</span></a>
+      <nav>
+        <a href="/app" class={active === 'home' ? 'on' : ''}>
+          <span class="ic">◆</span> Overview
+        </a>
+        <a href="/app/dives" class={active === 'dives' ? 'on' : ''}>
+          <span class="ic">🌊</span> Dive logs
+        </a>
+      </nav>
+      <div class="app-nav-foot">
+        <span class="who" id="who"></span>
+        <button id="signout" class="btn btn-ghost">Sign out</button>
+      </div>
+    </aside>
+    <main class="app-main">
+      <slot />
+    </main>
+  </div>
+
+  <div class="app-loading" id="app-loading">
+    <div class="spinner" aria-label="Loading"></div>
+  </div>
+
+  <style>
+    .app-loading {
+      min-height: 100dvh;
+      display: grid;
+      place-content: center;
+    }
+    .spinner {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 3px solid var(--surface-border);
+      border-top-color: var(--accent);
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .app-shell {
+      display: grid;
+      grid-template-columns: 250px 1fr;
+      min-height: 100dvh;
+    }
+    .app-nav {
+      border-right: 1px solid var(--surface-border);
+      background: var(--bg-elev);
+      padding: 1.4rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      position: sticky;
+      top: 0;
+      height: 100dvh;
+    }
+    .app-brand {
+      font-weight: 700;
+      font-size: var(--step-1);
+      padding: 0 0.5rem;
+    }
+    .app-brand span {
+      color: var(--accent);
+    }
+    .app-nav nav {
+      display: grid;
+      gap: 0.3rem;
+    }
+    .app-nav nav a {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      padding: 0.65rem 0.75rem;
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-size: var(--step--1);
+      transition: background 0.2s var(--ease), color 0.2s var(--ease);
+    }
+    .app-nav nav a:hover {
+      background: var(--bg-elev-2);
+      color: var(--text);
+    }
+    .app-nav nav a.on {
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .ic {
+      width: 1.2em;
+      text-align: center;
+    }
+    .app-nav-foot {
+      margin-top: auto;
+      display: grid;
+      gap: 0.7rem;
+    }
+    .who {
+      font-size: 0.78rem;
+      color: var(--text-faint);
+      padding: 0 0.5rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    #signout {
+      justify-content: center;
+    }
+    .app-main {
+      padding: clamp(1.4rem, 1rem + 2vw, 3rem);
+      max-width: 60rem;
+    }
+
+    @media (max-width: 720px) {
+      .app-shell {
+        grid-template-columns: 1fr;
+      }
+      .app-nav {
+        position: static;
+        height: auto;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.8rem;
+      }
+      .app-nav nav {
+        grid-auto-flow: column;
+      }
+      .app-nav nav a span:not(.ic) {
+        display: none;
+      }
+      .app-nav-foot {
+        margin: 0 0 0 auto;
+        grid-auto-flow: column;
+        align-items: center;
+      }
+    }
+  </style>
+
+  <script>
+    import { supabase, requireSession } from '../lib/supabase';
+
+    (async () => {
+      const session = await requireSession();
+      if (!session) return; // requireSession redirects to /login
+
+      // Reveal the shell now that we know the user is authenticated.
+      document.getElementById('app-loading')?.remove();
+      const shell = document.querySelector('[data-app-shell]') as HTMLElement;
+      shell.hidden = false;
+
+      const who = document.getElementById('who');
+      if (who) who.textContent = session.user.email ?? '';
+
+      document.getElementById('signout')?.addEventListener('click', async () => {
+        await supabase.auth.signOut();
+        location.href = '/';
+      });
+    })();
+  </script>
+</BaseLayout>

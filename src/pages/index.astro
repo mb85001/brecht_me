@@ -1,0 +1,797 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+// ── How this page works ──────────────────────────────────────────────────
+// Nothing here is invented about you. Every section carries a short GUIDE
+// sentence describing what belongs there, plus PLACEHOLDERS for the real text
+// and photos you'll add:
+//   • Photos  → drop files into /public/images (see public/images/README.md).
+//               Until a file exists, a labelled underwater placeholder shows.
+//   • Text    → replace the bracketed [ … ] placeholders inline below.
+// ─────────────────────────────────────────────────────────────────────────
+
+const galleries = [1, 2, 3, 4];
+---
+
+<BaseLayout>
+  <div class="scroll-progress" id="progress" aria-hidden="true"></div>
+
+  <!-- Ambient rising bubbles + light (sits behind non-photo sections) -->
+  <canvas id="bubbles" class="bubbles" aria-hidden="true"></canvas>
+
+  <header class="nav wrap" id="nav">
+    <a href="/" class="brand">brecht<span>.me</span></a>
+    <nav class="nav-links">
+      <a href="#about">About</a>
+      <a href="#gallery">Gallery</a>
+      <a href="#connect">Connect</a>
+      <a href="/app" class="btn btn-ghost nav-cta">Private area →</a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ══════════ HERO ══════════ -->
+    <!-- GUIDE: A full-screen underwater photo with your name and one-line tagline. -->
+    <section class="hero" id="top">
+      <figure class="ph hero-photo" data-hint="Full-screen hero — wide, sunlit underwater scene (reef, blue water, or a diver silhouette)">
+        <img src="/images/hero.jpg" alt="" fetchpriority="high" />
+        <span class="ph-hint"></span>
+      </figure>
+      <div class="hero-veil"></div>
+      <div class="caustics" aria-hidden="true"></div>
+
+      <div class="hero-content wrap">
+        <p class="eyebrow reveal"><span class="ping"></span> [ Short kicker — e.g. your role or location ]</p>
+        <h1 class="reveal">
+          <span class="ph-text">[ Your name ]</span>
+        </h1>
+        <p class="lead reveal">
+          [ One or two lines about who you are and what this site is. Keep it
+          human and short. ]
+        </p>
+        <div class="hero-cta reveal">
+          <a href="#about" class="btn btn-primary"><span>Explore</span></a>
+          <a href="/app" class="btn btn-glass">Private area</a>
+        </div>
+      </div>
+
+      <a href="#about" class="scroll-hint" aria-label="Scroll down"><span></span></a>
+    </section>
+
+    <!-- ══════════ INTRO LINE ══════════ -->
+    <!-- GUIDE: One big statement line — your mission or what you're about. -->
+    <section class="statement wrap reveal">
+      <p>
+        [ One bold sentence that sums you up — your work, the ocean, or both.
+        This is the line people remember. ]
+      </p>
+    </section>
+
+    <!-- ══════════ ABOUT ══════════ -->
+    <!-- GUIDE: A short intro paragraph plus a photo of you. -->
+    <section id="about" class="section wrap">
+      <div class="split">
+        <figure class="ph portrait reveal" data-hint="A portrait of you — ideally underwater or dive-related">
+          <img src="/images/about.jpg" alt="" />
+          <span class="ph-hint"></span>
+        </figure>
+        <div class="split-text reveal">
+          <p class="eyebrow">About</p>
+          <h2>[ A few words about you ]</h2>
+          <p class="muted">
+            [ Two or three sentences introducing yourself: what you do, what
+            you love about diving, and what visitors will find here. Write it in
+            your own voice. ]
+          </p>
+          <ul class="facts">
+            <li><span>[ Label ]</span> [ e.g. what you do ]</li>
+            <li><span>[ Label ]</span> [ e.g. certification / favourite site ]</li>
+            <li><span>[ Label ]</span> [ e.g. where you're based ]</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════ FEATURED ══════════ -->
+    <!-- GUIDE: Highlight one thing — a dive, a trip, a project — with a big photo. -->
+    <section class="section wrap">
+      <div class="split reverse">
+        <figure class="ph feature reveal" data-hint="A big photo of the dive, trip, or project you most want to highlight">
+          <img src="/images/feature.jpg" alt="" />
+          <span class="ph-hint"></span>
+        </figure>
+        <div class="split-text reveal">
+          <p class="eyebrow">Featured</p>
+          <h2>[ Title of the thing you're highlighting ]</h2>
+          <p class="muted">
+            [ A short paragraph about it — what it is, why it matters to you, and
+            a link if there is one. ]
+          </p>
+          <a href="#" class="text-link">[ Optional link → ]</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════ GALLERY ══════════ -->
+    <!-- GUIDE: A grid of your favourite underwater photos. -->
+    <section id="gallery" class="section wrap">
+      <div class="section-head reveal">
+        <p class="eyebrow">Gallery</p>
+        <h2>[ Section title — e.g. From the deep ]</h2>
+        <p class="muted head-sub">
+          [ One line introducing your photos — where they're from, or what
+          you love shooting. ]
+        </p>
+      </div>
+      <div class="gallery">
+        {
+          galleries.map((n) => (
+            <figure class="ph gal reveal" data-hint={`Gallery photo ${n} — a favourite underwater shot`}>
+              <img src={`/images/gallery-${n}.jpg`} alt="" loading="lazy" />
+              <span class="ph-hint" />
+              <figcaption class="gal-cap">[ Caption {n} — place & moment ]</figcaption>
+            </figure>
+          ))
+        }
+      </div>
+    </section>
+
+    <!-- ══════════ PRIVATE AREA ══════════ -->
+    <section class="section wrap reveal">
+      <div class="cta-band">
+        <div class="caustics soft" aria-hidden="true"></div>
+        <div class="cta-inner">
+          <div>
+            <p class="eyebrow">Private</p>
+            <h2>Your dive logbook</h2>
+            <p class="muted">Your dive logs, synced with the app and secured behind login.</p>
+          </div>
+          <a href="/app" class="btn btn-primary"><span>Enter private area →</span></a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════ CONNECT ══════════ -->
+    <!-- GUIDE: How people reach you. -->
+    <section id="connect" class="section wrap connect reveal">
+      <p class="eyebrow">Connect</p>
+      <h2>[ Get in touch ]</h2>
+      <p class="muted connect-lead">
+        [ One line inviting people to reach out. ]
+      </p>
+      <div class="connect-links">
+        <a class="btn btn-primary" href="mailto:[ your@email ]"><span>[ your@email ]</span></a>
+        <a class="btn btn-ghost" href="#">[ Social / other link ]</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap footer">
+    <span>© {new Date().getFullYear()} [ Your name ]</span>
+    <span class="footer-dot">·</span>
+    <span>Built with Astro, hosted on GitHub Pages</span>
+  </footer>
+
+  <style>
+    /* ---------- Ocean background between photos ---------- */
+    :global(body) {
+      background: linear-gradient(
+        180deg,
+        #071a2b 0%,
+        #06131f 40%,
+        var(--bg) 100%
+      );
+    }
+    :root[data-theme='light'] :global(body) {
+      background: linear-gradient(180deg, #cfeef2 0%, #e8f2f6 45%, var(--bg) 100%);
+    }
+    .bubbles {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .scroll-progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      width: 0;
+      z-index: 60;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      box-shadow: 0 0 12px var(--accent);
+    }
+
+    /* ---------- Photo placeholder system ---------- */
+    .ph {
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--radius);
+      background: radial-gradient(
+          120% 130% at 25% 0%,
+          rgba(79, 209, 197, 0.28),
+          transparent 55%
+        ),
+        radial-gradient(100% 120% at 90% 20%, rgba(99, 102, 241, 0.22), transparent 60%),
+        linear-gradient(165deg, #0c3a47, #0a2038 55%, #06121f);
+      border: 1px solid var(--surface-border);
+      isolation: isolate;
+    }
+    .ph img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    /* When the image is missing, JS adds .no-img → show the labelled hint */
+    .ph.no-img img {
+      display: none;
+    }
+    .ph-hint {
+      display: none;
+    }
+    .ph.no-img .ph-hint {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      padding: 1.4rem;
+      text-align: center;
+      font-size: var(--step--1);
+      color: color-mix(in srgb, #cdeef2 80%, transparent);
+      background: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 12px,
+        rgba(255, 255, 255, 0.02) 12px,
+        rgba(255, 255, 255, 0.02) 24px
+      );
+    }
+    .ph.no-img .ph-hint::before {
+      content: '📷';
+      font-size: 1.6rem;
+    }
+    .ph.no-img .ph-hint::after {
+      content: attr(data-label);
+      max-width: 30ch;
+      line-height: 1.4;
+    }
+
+    /* ---------- Hero ---------- */
+    .hero {
+      position: relative;
+      min-height: 100svh;
+      display: flex;
+      align-items: flex-end;
+      overflow: hidden;
+    }
+    .hero-photo {
+      position: absolute;
+      inset: 0;
+      border: none;
+      border-radius: 0;
+      z-index: 0;
+    }
+    .hero-photo img {
+      animation: slowzoom 20s ease-out both;
+    }
+    /* In the empty state, keep the placeholder label in the upper area so it
+       never collides with the hero text, which sits along the bottom. */
+    .hero-photo.no-img .ph-hint {
+      justify-content: flex-start;
+      padding-top: 20vh;
+    }
+    @keyframes slowzoom {
+      from {
+        transform: scale(1.12);
+      }
+      to {
+        transform: scale(1);
+      }
+    }
+    .hero-veil {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background: linear-gradient(
+          180deg,
+          rgba(4, 12, 20, 0.35) 0%,
+          rgba(4, 12, 20, 0.1) 35%,
+          rgba(4, 12, 20, 0.75) 100%
+        ),
+        radial-gradient(120% 80% at 50% 120%, rgba(4, 12, 20, 0.9), transparent 60%);
+    }
+    .caustics {
+      position: absolute;
+      inset: -20%;
+      z-index: 2;
+      pointer-events: none;
+      mix-blend-mode: soft-light;
+      opacity: 0.6;
+      background: radial-gradient(
+          40% 30% at 30% 20%,
+          rgba(180, 255, 245, 0.5),
+          transparent 60%
+        ),
+        radial-gradient(35% 25% at 70% 35%, rgba(150, 230, 255, 0.4), transparent 60%),
+        radial-gradient(45% 30% at 55% 65%, rgba(190, 255, 250, 0.35), transparent 60%);
+      filter: blur(6px);
+      animation: caustic 14s ease-in-out infinite alternate;
+    }
+    .caustics.soft {
+      opacity: 0.35;
+      z-index: 0;
+    }
+    @keyframes caustic {
+      to {
+        transform: translate3d(4%, 3%, 0) scale(1.1);
+        opacity: 0.3;
+      }
+    }
+    .hero-content {
+      position: relative;
+      z-index: 3;
+      padding-bottom: clamp(4rem, 12vh, 9rem);
+      padding-top: 6rem;
+    }
+    .ping {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-right: 0.5rem;
+      animation: ping 2s ease-out infinite;
+      vertical-align: middle;
+    }
+    @keyframes ping {
+      0% {
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 70%, transparent);
+      }
+      70%,
+      100% {
+        box-shadow: 0 0 0 10px transparent;
+      }
+    }
+    .hero h1 {
+      font-size: var(--step-4);
+      margin: 0.8rem 0 1.3rem;
+      text-shadow: 0 2px 30px rgba(0, 0, 0, 0.5);
+    }
+    .hero .lead {
+      font-size: var(--step-1);
+      color: #d7e3ee;
+      max-width: 46ch;
+      line-height: 1.5;
+      text-shadow: 0 1px 20px rgba(0, 0, 0, 0.5);
+    }
+    .hero-cta {
+      display: flex;
+      gap: 0.9rem;
+      margin-top: 2rem;
+      flex-wrap: wrap;
+    }
+    .btn-primary span {
+      position: relative;
+      z-index: 1;
+    }
+    .btn-glass {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: #fff;
+      backdrop-filter: blur(8px);
+    }
+    .btn-glass:hover {
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    /* placeholder text style — clearly “to be replaced”, still tidy */
+    .ph-text {
+      color: #fff;
+    }
+    h1 .ph-text,
+    h2 {
+      letter-spacing: -0.02em;
+    }
+    /* bracketed placeholders read as muted guidance */
+    .lead,
+    .muted,
+    .facts,
+    .gal-cap,
+    .connect-lead {
+    }
+
+    .scroll-hint {
+      position: absolute;
+      left: 50%;
+      bottom: 1.4rem;
+      z-index: 3;
+      transform: translateX(-50%);
+      width: 26px;
+      height: 42px;
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      border-radius: 20px;
+      display: grid;
+      place-items: start center;
+      padding-top: 7px;
+    }
+    .scroll-hint span {
+      width: 4px;
+      height: 8px;
+      border-radius: 2px;
+      background: #fff;
+      animation: wheel 1.6s ease-in-out infinite;
+    }
+    @keyframes wheel {
+      0% {
+        opacity: 0;
+        transform: translateY(0);
+      }
+      40% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+    }
+
+    /* ---------- Nav ---------- */
+    .nav {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      top: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.1rem 1.25rem;
+      z-index: 40;
+      transition: background 0.3s var(--ease), border-color 0.3s var(--ease);
+      border-bottom: 1px solid transparent;
+    }
+    .nav.scrolled {
+      backdrop-filter: blur(12px);
+      background: color-mix(in srgb, var(--bg) 62%, transparent);
+      border-bottom-color: var(--surface-border);
+    }
+    .brand {
+      font-weight: 700;
+      font-size: var(--step-1);
+      letter-spacing: -0.03em;
+    }
+    .brand span {
+      color: var(--accent);
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      font-size: var(--step--1);
+      color: #dfe8f0;
+    }
+    .nav.scrolled .nav-links {
+      color: var(--text-muted);
+    }
+    .nav-links a:not(.nav-cta):hover {
+      color: var(--accent);
+    }
+    .nav-cta {
+      padding: 0.5rem 0.9rem;
+    }
+    @media (max-width: 640px) {
+      .nav-links a:not(.nav-cta) {
+        display: none;
+      }
+    }
+
+    /* ---------- Statement ---------- */
+    .statement {
+      position: relative;
+      z-index: 1;
+      padding: clamp(4rem, 12vh, 8rem) 0;
+    }
+    .statement p {
+      font-size: var(--step-3);
+      font-weight: 650;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      max-width: 22ch;
+      margin: 0;
+      background: linear-gradient(120deg, #eaf6f8, var(--accent) 120%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    /* ---------- Sections / splits ---------- */
+    .section {
+      position: relative;
+      z-index: 1;
+      padding: clamp(3rem, 8vh, 6rem) 0;
+    }
+    .section-head {
+      margin-bottom: 2.5rem;
+    }
+    .section-head h2 {
+      font-size: var(--step-3);
+      margin-top: 0.5rem;
+    }
+    .head-sub {
+      max-width: 48ch;
+      margin-top: 0.6rem;
+    }
+    h2 {
+      font-size: var(--step-2);
+    }
+    .muted {
+      color: var(--text-muted);
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 0.9fr 1.1fr;
+      gap: clamp(1.5rem, 4vw, 3.5rem);
+      align-items: center;
+    }
+    .split.reverse .ph {
+      order: 2;
+    }
+    .split-text .eyebrow {
+      margin-bottom: 0.4rem;
+    }
+    .split-text h2 {
+      margin-bottom: 0.9rem;
+    }
+    .portrait {
+      aspect-ratio: 4 / 5;
+    }
+    .feature {
+      aspect-ratio: 4 / 3;
+    }
+    .facts {
+      list-style: none;
+      margin: 1.6rem 0 0;
+      padding: 0;
+      display: grid;
+      gap: 0.7rem;
+    }
+    .facts li {
+      display: flex;
+      gap: 0.8rem;
+      padding-bottom: 0.7rem;
+      border-bottom: 1px solid var(--surface-border);
+      color: var(--text-muted);
+      font-size: var(--step--1);
+    }
+    .facts li span {
+      color: var(--accent);
+      min-width: 8ch;
+      font-weight: 600;
+    }
+    .text-link {
+      display: inline-block;
+      margin-top: 1.2rem;
+      color: var(--accent);
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.2s var(--ease);
+    }
+    .text-link:hover {
+      border-bottom-color: var(--accent);
+    }
+    @media (max-width: 760px) {
+      .split {
+        grid-template-columns: 1fr;
+      }
+      .split.reverse .ph {
+        order: 0;
+      }
+      .portrait {
+        aspect-ratio: 16 / 10;
+      }
+    }
+
+    /* ---------- Gallery ---------- */
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.9rem;
+    }
+    .gal {
+      aspect-ratio: 1;
+      transition: transform 0.35s var(--ease);
+    }
+    .gal:hover {
+      transform: translateY(-5px);
+    }
+    .gal img {
+      transition: transform 0.6s var(--ease);
+    }
+    .gal:hover img {
+      transform: scale(1.06);
+    }
+    .gal-cap {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 2;
+      padding: 1.5rem 0.9rem 0.7rem;
+      font-size: 0.78rem;
+      color: #eaf3f6;
+      background: linear-gradient(to top, rgba(3, 12, 20, 0.8), transparent);
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.3s var(--ease), transform 0.3s var(--ease);
+    }
+    .gal:hover .gal-cap {
+      opacity: 1;
+      transform: none;
+    }
+    @media (max-width: 760px) {
+      .gallery {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    /* ---------- Private CTA band ---------- */
+    .cta-band {
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--radius);
+      border: 1px solid var(--surface-border);
+      background: linear-gradient(135deg, #0d3a48, #0a2338 70%);
+      padding: clamp(1.6rem, 1rem + 3vw, 3rem);
+    }
+    .cta-inner {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .cta-band h2 {
+      margin: 0.3rem 0;
+      color: #eaf6f8;
+    }
+
+    /* ---------- Connect ---------- */
+    .connect h2 {
+      margin: 0.4rem 0;
+    }
+    .connect-lead {
+      max-width: 42ch;
+    }
+    .connect-links {
+      display: flex;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+      margin-top: 1.4rem;
+    }
+
+    /* ---------- Footer ---------- */
+    .footer {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      padding: 2.5rem 0 4rem;
+      color: var(--text-faint);
+      font-size: var(--step--1);
+    }
+    .footer-dot {
+      opacity: 0.5;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .hero-photo img,
+      .caustics,
+      .ping,
+      .scroll-hint span {
+        animation: none;
+      }
+    }
+  </style>
+
+  <script>
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /* Photo placeholders: if a real image is missing, show the labelled hint. */
+    document.querySelectorAll<HTMLImageElement>('.ph img').forEach((img) => {
+      const fig = img.closest('.ph') as HTMLElement;
+      const hint = fig?.querySelector('.ph-hint') as HTMLElement | null;
+      if (hint && fig?.dataset.hint) hint.setAttribute('data-label', fig.dataset.hint);
+      const markMissing = () => fig?.classList.add('no-img');
+      if (img.complete && img.naturalWidth === 0) markMissing();
+      img.addEventListener('error', markMissing);
+    });
+
+    /* Scroll reveal */
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            (e.target as HTMLElement).style.opacity = '1';
+            (e.target as HTMLElement).style.transform = 'none';
+            (e.target as HTMLElement).style.filter = 'none';
+            io.unobserve(e.target);
+          }
+        }
+      },
+      { threshold: 0.14 }
+    );
+    document.querySelectorAll<HTMLElement>('.reveal').forEach((el) => {
+      if (reduce) return;
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(22px)';
+      el.style.filter = 'blur(5px)';
+      el.style.transition =
+        'opacity .7s cubic-bezier(.22,1,.36,1), transform .7s cubic-bezier(.22,1,.36,1), filter .7s cubic-bezier(.22,1,.36,1)';
+      io.observe(el);
+    });
+
+    /* Scroll progress + nav */
+    const progress = document.getElementById('progress')!;
+    const nav = document.getElementById('nav')!;
+    const onScroll = () => {
+      const h = document.documentElement;
+      const max = h.scrollHeight - h.clientHeight;
+      progress.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + '%';
+      nav.classList.toggle('scrolled', h.scrollTop > 40);
+    };
+    onScroll();
+    addEventListener('scroll', onScroll, { passive: true });
+
+    /* Ambient rising bubbles */
+    const canvas = document.getElementById('bubbles') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d');
+    if (ctx && !reduce) {
+      let w = 0, h = 0;
+      const dpr = Math.min(devicePixelRatio || 1, 2);
+      type B = { x: number; y: number; r: number; v: number; a: number; drift: number; ph: number };
+      let bubbles: B[] = [];
+      const spawn = (): B => ({
+        x: Math.random() * w,
+        y: h + Math.random() * h,
+        r: (Math.random() * 2.2 + 0.5) * dpr,
+        v: (Math.random() * 0.5 + 0.15) * dpr,
+        a: Math.random() * 0.35 + 0.08,
+        drift: (Math.random() * 0.6 + 0.2) * dpr,
+        ph: Math.random() * Math.PI * 2,
+      });
+      const resize = () => {
+        w = canvas.width = Math.floor(innerWidth * dpr);
+        h = canvas.height = Math.floor(innerHeight * dpr);
+        canvas.style.width = innerWidth + 'px';
+        canvas.style.height = innerHeight + 'px';
+        const n = Math.min(70, Math.floor((innerWidth * innerHeight) / 26000));
+        bubbles = Array.from({ length: n }, spawn);
+      };
+      const frame = (t: number) => {
+        ctx.clearRect(0, 0, w, h);
+        for (const b of bubbles) {
+          b.y -= b.v;
+          b.x += Math.sin(t * 0.0006 + b.ph) * b.drift * 0.15;
+          if (b.y < -10) Object.assign(b, spawn(), { y: h + 8 });
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(140,220,225,${b.a})`;
+          ctx.fill();
+        }
+        requestAnimationFrame(frame);
+      };
+      resize();
+      addEventListener('resize', resize);
+      requestAnimationFrame(frame);
+    }
+  </script>
+</BaseLayout>
