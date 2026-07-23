@@ -38,15 +38,25 @@ create table if not exists dives (
   water_type           text,
   conditions           text,
   notes                text,
-  -- stable key the DiveScan app can use to upsert without duplicating:
-  external_id          text,
+  -- Stable key clients upsert on. Defaulted here so rows created by any
+  -- client (e.g. the website form) always carry one — the DiveScan app
+  -- keys its sync on (user_id, external_id).
+  external_id          text not null default gen_random_uuid()::text,
   created_at           timestamptz not null default now(),
   updated_at           timestamptz not null default now()
 );
 
 create index if not exists dives_user_date_idx on dives (user_id, date desc);
 create unique index if not exists dives_user_external_idx
-  on dives (user_id, external_id) where external_id is not null;
+  on dives (user_id, external_id);
+
+-- Keep updated_at honest for every client: bump it on any UPDATE so
+-- last-write-wins sync in the app sees web edits as new.
+create extension if not exists moddatetime;
+drop trigger if exists dives_set_updated_at on dives;
+create trigger dives_set_updated_at
+  before update on dives
+  for each row execute function moddatetime(updated_at);
 
 -- ---------------------------------------------------------------------------
 -- Row-Level Security
