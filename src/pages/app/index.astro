@@ -110,16 +110,18 @@ import AppLayout from '../../layouts/AppLayout.astro';
       const name = session.user.email?.split('@')[0] ?? '';
       if (greeting) greeting.textContent = `Welcome back, ${name}`;
 
-      // Dive count + recent dives
+      // Dive count + recent dives (excluding soft-deleted tombstones)
       const { count } = await supabase
         .from('dives')
-        .select('*', { count: 'exact', head: true });
+        .select('*', { count: 'exact', head: true })
+        .is('deleted_at', null);
       const countEl = document.getElementById('dive-count');
       if (countEl) countEl.textContent = String(count ?? 0);
 
       const { data: recent } = await supabase
         .from('dives')
         .select('dive_number, date, site_name, max_depth_meters')
+        .is('deleted_at', null)
         .order('date', { ascending: false })
         .limit(5);
 

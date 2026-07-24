@@ -42,11 +42,16 @@ create table if not exists dives (
   -- client (e.g. the website form) always carry one — the DiveScan app
   -- keys its sync on (user_id, external_id).
   external_id          text not null default gen_random_uuid()::text,
+  -- Soft-delete tombstone. A delete sets this instead of removing the row, so
+  -- other clients (the DiveScan app) learn about it on their next sync and
+  -- remove their local copy. The website hides rows where this is set.
+  deleted_at           timestamptz,
   created_at           timestamptz not null default now(),
   updated_at           timestamptz not null default now()
 );
 
 create index if not exists dives_user_date_idx on dives (user_id, date desc);
+create index if not exists dives_user_updated_idx on dives (user_id, updated_at);
 create unique index if not exists dives_user_external_idx
   on dives (user_id, external_id);
 

@@ -253,6 +253,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       const { data, error } = await supabase
         .from('dives')
         .select(SELECT)
+        .is('deleted_at', null)
         .order('date', { ascending: false });
 
       if (error) {
@@ -299,7 +300,12 @@ import AppLayout from '../../layouts/AppLayout.astro';
           const id = (e.currentTarget as HTMLElement).dataset.id!;
           if (!confirm('Delete this dive?')) return;
           if (id === editingId) closeForm();
-          await supabase.from('dives').delete().eq('id', id);
+          // Soft delete: set a tombstone instead of removing the row, so the
+          // DiveScan app picks up the deletion on its next sync.
+          await supabase
+            .from('dives')
+            .update({ deleted_at: new Date().toISOString() })
+            .eq('id', id);
           load();
         })
       );
