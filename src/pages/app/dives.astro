@@ -17,6 +17,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
   <!-- Add / edit form -->
   <form class="card dive-form" id="dive-form" hidden>
+    <p class="form-legend" id="form-legend">New dive</p>
     <div class="grid">
       <label>Dive #<input type="number" id="f-number" min="1" /></label>
       <label>Date<input type="date" id="f-date" required /></label>
@@ -59,6 +60,11 @@ import AppLayout from '../../layouts/AppLayout.astro';
     }
     .dive-form {
       margin-bottom: 1.5rem;
+    }
+    .form-legend {
+      margin: 0 0 1rem;
+      font-weight: 600;
+      font-size: var(--step-0);
     }
     .grid {
       display: grid;
@@ -138,16 +144,31 @@ import AppLayout from '../../layouts/AppLayout.astro';
       font-weight: 700;
       white-space: nowrap;
     }
-    .del {
+    .dive-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.2rem;
+    }
+    .icon-btn {
       background: none;
       border: none;
       color: var(--text-faint);
       cursor: pointer;
-      font-size: 1.1rem;
-      padding: 0.2rem 0.4rem;
+      font-size: 1rem;
+      padding: 0.3rem 0.45rem;
+      border-radius: var(--radius-sm);
+      line-height: 1;
     }
-    .del:hover {
+    .icon-btn.edit:hover {
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+    .icon-btn.del:hover {
       color: #f87171;
+    }
+    .dive-item.editing {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
     }
     @media (max-width: 560px) {
       .grid {
@@ -162,36 +183,89 @@ import AppLayout from '../../layouts/AppLayout.astro';
     const form = document.getElementById('dive-form') as HTMLFormElement;
     const list = document.getElementById('dives')!;
     const msg = document.getElementById('dive-msg')!;
+    const legend = document.getElementById('form-legend')!;
+    const saveBtn = document.getElementById('save-dive')!;
+    const notes = document.getElementById('f-notes') as HTMLTextAreaElement;
     const el = (id: string) => document.getElementById(id) as HTMLInputElement;
 
-    document.getElementById('new-dive')!.addEventListener('click', () => {
-      form.hidden = !form.hidden;
-      if (!form.hidden) el('f-date').focus();
-    });
-    document.getElementById('cancel-dive')!.addEventListener('click', () => {
+    // Fields the form owns, kept in one place so load(), edit and save agree.
+    const SELECT =
+      'id, dive_number, date, site_name, max_depth_meters, bottom_time_minutes, buddy, water_temp_celsius, notes';
+
+    let dives: any[] = [];
+    // null = the form is in "add" mode; a UUID = editing that dive.
+    let editingId: string | null = null;
+
+    function openForm(mode: 'new' | 'edit') {
+      form.hidden = false;
+      legend.textContent = mode === 'edit' ? 'Edit dive' : 'New dive';
+      saveBtn.textContent = mode === 'edit' ? 'Update dive' : 'Add dive';
+      msg.textContent = '';
+      highlightEditing();
+    }
+
+    function closeForm() {
       form.reset();
       form.hidden = true;
+      editingId = null;
       msg.textContent = '';
+      highlightEditing();
+    }
+
+    function highlightEditing() {
+      list.querySelectorAll('.dive-item').forEach((li) => {
+        li.classList.toggle(
+          'editing',
+          editingId !== null && (li as HTMLElement).dataset.id === editingId
+        );
+      });
+    }
+
+    document.getElementById('new-dive')!.addEventListener('click', () => {
+      // The button toggles the add form, but always leaves any edit in progress.
+      if (!form.hidden && editingId === null) {
+        closeForm();
+        return;
+      }
+      editingId = null;
+      form.reset();
+      openForm('new');
+      el('f-date').focus();
     });
+
+    document.getElementById('cancel-dive')!.addEventListener('click', closeForm);
+
+    function startEdit(d: any) {
+      editingId = d.id;
+      el('f-number').value = d.dive_number ?? '';
+      el('f-date').value = d.date ?? '';
+      el('f-site').value = d.site_name ?? '';
+      el('f-depth').value = d.max_depth_meters ?? '';
+      el('f-bottom').value = d.bottom_time_minutes ?? '';
+      el('f-buddy').value = d.buddy ?? '';
+      el('f-temp').value = d.water_temp_celsius ?? '';
+      notes.value = d.notes ?? '';
+      openForm('edit');
+      form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
 
     async function load() {
       const { data, error } = await supabase
         .from('dives')
-        .select(
-          'id, dive_number, date, site_name, max_depth_meters, bottom_time_minutes, buddy, water_temp_celsius, notes'
-        )
+        .select(SELECT)
         .order('date', { ascending: false });
 
       if (error) {
         list.innerHTML = `<li class="muted">Could not load dives: ${escapeHtml(error.message)}</li>`;
         return;
       }
-      if (!data || data.length === 0) {
+      dives = data ?? [];
+      if (dives.length === 0) {
         list.innerHTML =
           '<li class="muted">No dives yet. Click “New dive” to add one.</li>';
         return;
       }
-      list.innerHTML = data
+      list.innerHTML = dives
         .map((d: any) => {
           const date = d.date ? new Date(d.date).toLocaleDateString() : '—';
           const bt = d.bottom_time_minutes
@@ -199,29 +273,42 @@ import AppLayout from '../../layouts/AppLayout.astro';
             : '';
           const buddy = d.buddy ? ` · with ${escapeHtml(d.buddy)}` : '';
           const num = d.dive_number ? `#${d.dive_number} ` : '';
-          return `<li class="dive-item">
+          return `<li class="dive-item" data-id="${d.id}">
             <div class="dive-main">
               <span class="dive-title">${num}${escapeHtml(d.site_name ?? 'Untitled site')}</span>
               <span class="dive-meta">${date}${bt}${buddy}</span>
             </div>
             <span class="dive-depth">${d.max_depth_meters ? d.max_depth_meters + ' m' : ''}</span>
-            <button class="del" data-id="${d.id}" title="Delete">✕</button>
+            <div class="dive-actions">
+              <button class="icon-btn edit" data-id="${d.id}" title="Edit" aria-label="Edit dive">✎</button>
+              <button class="icon-btn del" data-id="${d.id}" title="Delete" aria-label="Delete dive">✕</button>
+            </div>
           </li>`;
         })
         .join('');
 
+      list.querySelectorAll('.edit').forEach((b) =>
+        b.addEventListener('click', (e) => {
+          const id = (e.currentTarget as HTMLElement).dataset.id!;
+          const dive = dives.find((d) => d.id === id);
+          if (dive) startEdit(dive);
+        })
+      );
       list.querySelectorAll('.del').forEach((b) =>
         b.addEventListener('click', async (e) => {
           const id = (e.currentTarget as HTMLElement).dataset.id!;
           if (!confirm('Delete this dive?')) return;
+          if (id === editingId) closeForm();
           await supabase.from('dives').delete().eq('id', id);
           load();
         })
       );
+      highlightEditing();
     }
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      saveBtn.setAttribute('disabled', 'true');
       msg.textContent = 'Saving…';
       msg.className = 'msg';
       const {
@@ -230,8 +317,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       if (!session) return;
 
       const num = (v: string) => (v === '' ? null : Number(v));
-      const row = {
-        user_id: session.user.id,
+      const fields = {
         dive_number: num(el('f-number').value),
         date: el('f-date').value || null,
         site_name: el('f-site').value || null,
@@ -239,18 +325,22 @@ import AppLayout from '../../layouts/AppLayout.astro';
         bottom_time_minutes: num(el('f-bottom').value),
         buddy: el('f-buddy').value || null,
         water_temp_celsius: num(el('f-temp').value),
-        notes: (document.getElementById('f-notes') as HTMLTextAreaElement).value || null,
+        notes: notes.value || null,
       };
 
-      const { error } = await supabase.from('dives').insert(row);
+      // Editing bumps updated_at (via the DB trigger), so the app picks the
+      // change up on its next sync. New dives get a user_id; updates keep it.
+      const { error } = editingId
+        ? await supabase.from('dives').update(fields).eq('id', editingId)
+        : await supabase.from('dives').insert({ user_id: session.user.id, ...fields });
+
+      saveBtn.removeAttribute('disabled');
       if (error) {
         msg.textContent = error.message;
         msg.className = 'msg error';
         return;
       }
-      form.reset();
-      form.hidden = true;
-      msg.textContent = '';
+      closeForm();
       load();
     });
 
