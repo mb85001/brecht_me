@@ -83,3 +83,25 @@ create policy dives_all on dives
   for all
   using (user_id = auth.uid())
   with check (user_id = auth.uid());
+
+-- ---------------------------------------------------------------------------
+-- Tombstone cleanup
+-- ---------------------------------------------------------------------------
+-- Soft-deleted rows are only kept as markers so other clients can learn of the
+-- deletion. Once every device has had a chance to sync, they're dead weight, so
+-- a daily pg_cron job hard-deletes tombstones older than 30 days.
+--
+-- Trade-off: a device that stays offline for more than 30 days may miss the
+-- tombstone and could re-upload the dive. 30 days is a safe window for a
+-- personal logbook; raise the interval if a device might be dark for longer.
+--
+-- If `create extension pg_cron` errors, enable pg_cron first via the Supabase
+-- dashboard: Database -> Extensions -> pg_cron.
+create extension if not exists pg_cron;
+
+-- cron.schedule upserts by job name, so re-running this is safe.
+select cron.schedule(
+  'purge-deleted-dives',
+  '0 3 * * *', -- every day at 03:00 UTC
+  $$ delete from dives where deleted_at is not null and deleted_at < now() - interval '30 days' $$
+);
