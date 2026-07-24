@@ -115,9 +115,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
     }
     .dive-item {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
+      flex-direction: column;
+      gap: 0.8rem;
       padding: 1rem 1.2rem;
       background: var(--bg-elev);
       border: 1px solid var(--surface-border);
@@ -126,6 +125,38 @@ import AppLayout from '../../layouts/AppLayout.astro';
     }
     .dive-item:hover {
       border-color: var(--accent);
+    }
+    .dive-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .dive-photos {
+      display: flex;
+      gap: 0.5rem;
+      overflow-x: auto;
+      padding-bottom: 0.2rem;
+    }
+    .dive-photos .thumb {
+      flex: 0 0 auto;
+      display: block;
+      line-height: 0;
+    }
+    .dive-photos .thumb img {
+      width: 68px;
+      height: 68px;
+      object-fit: cover;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--surface-border);
+      transition: border-color 0.2s var(--ease), transform 0.2s var(--ease);
+    }
+    .dive-photos .thumb:hover img {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+    .photos-loading {
+      font-size: 0.78rem;
     }
     .dive-main {
       display: grid;
@@ -189,8 +220,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
     const el = (id: string) => document.getElementById(id) as HTMLInputElement;
 
     // Fields the form owns, kept in one place so load(), edit and save agree.
+    // `photos` is read-only here — the DiveScan app writes it.
     const SELECT =
-      'id, dive_number, date, site_name, max_depth_meters, bottom_time_minutes, buddy, water_temp_celsius, notes';
+      'id, dive_number, date, site_name, max_depth_meters, bottom_time_minutes, buddy, water_temp_celsius, notes, photos';
 
     let dives: any[] = [];
     // null = the form is in "add" mode; a UUID = editing that dive.
@@ -274,16 +306,20 @@ import AppLayout from '../../layouts/AppLayout.astro';
             : '';
           const buddy = d.buddy ? ` · with ${escapeHtml(d.buddy)}` : '';
           const num = d.dive_number ? `#${d.dive_number} ` : '';
+          const photoCount = Array.isArray(d.photos) ? d.photos.length : 0;
           return `<li class="dive-item" data-id="${d.id}">
-            <div class="dive-main">
-              <span class="dive-title">${num}${escapeHtml(d.site_name ?? 'Untitled site')}</span>
-              <span class="dive-meta">${date}${bt}${buddy}</span>
+            <div class="dive-row">
+              <div class="dive-main">
+                <span class="dive-title">${num}${escapeHtml(d.site_name ?? 'Untitled site')}</span>
+                <span class="dive-meta">${date}${bt}${buddy}</span>
+              </div>
+              <span class="dive-depth">${d.max_depth_meters ? d.max_depth_meters + ' m' : ''}</span>
+              <div class="dive-actions">
+                <button class="icon-btn edit" data-id="${d.id}" title="Edit" aria-label="Edit dive">✎</button>
+                <button class="icon-btn del" data-id="${d.id}" title="Delete" aria-label="Delete dive">✕</button>
+              </div>
             </div>
-            <span class="dive-depth">${d.max_depth_meters ? d.max_depth_meters + ' m' : ''}</span>
-            <div class="dive-actions">
-              <button class="icon-btn edit" data-id="${d.id}" title="Edit" aria-label="Edit dive">✎</button>
-              <button class="icon-btn del" data-id="${d.id}" title="Delete" aria-label="Delete dive">✕</button>
-            </div>
+            ${photoCount ? `<div class="dive-photos" data-id="${d.id}"><span class="muted photos-loading">Loading ${photoCount} photo${photoCount > 1 ? 's' : ''}…</span></div>` : ''}
           </li>`;
         })
         .join('');
@@ -310,6 +346,46 @@ import AppLayout from '../../layouts/AppLayout.astro';
         })
       );
       highlightEditing();
+      renderPhotos();
+    }
+
+    // The bucket is private, so thumbnails need short-lived signed URLs. Sign
+    // every photo path in one batch, then drop the images into each dive row.
+    async function renderPhotos() {
+      const paths: string[] = [];
+      for (const d of dives) {
+        for (const p of d.photos ?? []) {
+          if (p?.path) paths.push(p.path);
+        }
+      }
+      if (paths.length === 0) return;
+
+      const { data: signed, error } = await supabase.storage
+        .from('dive-photos')
+        .createSignedUrls(paths, 3600);
+      if (error || !signed) return;
+
+      const urlByPath = new Map<string, string>();
+      for (const s of signed) {
+        if (s.signedUrl && !s.error && s.path) urlByPath.set(s.path, s.signedUrl);
+      }
+
+      for (const d of dives) {
+        const photos = (d.photos ?? []).filter((p: any) => p?.path && urlByPath.has(p.path));
+        const container = list.querySelector(`.dive-photos[data-id="${d.id}"]`) as HTMLElement | null;
+        if (!container) continue;
+        if (photos.length === 0) {
+          container.remove();
+          continue;
+        }
+        container.innerHTML = photos
+          .map((p: any) => {
+            const url = urlByPath.get(p.path)!;
+            const cap = p.caption ? escapeHtml(p.caption) : '';
+            return `<a class="thumb" href="${url}" target="_blank" rel="noopener" title="${cap}"><img src="${url}" alt="${cap}" loading="lazy" /></a>`;
+          })
+          .join('');
+      }
     }
 
     form.addEventListener('submit', async (e) => {

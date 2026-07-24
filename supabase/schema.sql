@@ -46,6 +46,10 @@ create table if not exists dives (
   -- other clients (the DiveScan app) learn about it on their next sync and
   -- remove their local copy. The website hides rows where this is set.
   deleted_at           timestamptz,
+  -- Thumbnail references pushed by the app: an array of
+  -- {external_id, path, caption}, where `path` points into the private
+  -- `dive-photos` storage bucket. The website renders them via signed URLs.
+  photos               jsonb not null default '[]'::jsonb,
   created_at           timestamptz not null default now(),
   updated_at           timestamptz not null default now()
 );
@@ -105,3 +109,35 @@ select cron.schedule(
   '0 3 * * *', -- every day at 03:00 UTC
   $$ delete from dives where deleted_at is not null and deleted_at < now() - interval '30 days' $$
 );
+
+-- ---------------------------------------------------------------------------
+-- Photo thumbnails (private storage bucket)
+-- ---------------------------------------------------------------------------
+-- The app uploads each dive photo's small thumbnail (~300px JPEG) to
+--   dive-photos/{user_id}/{dive_external_id}/{photo_external_id}.jpg
+-- and records it in dives.photos. The bucket is PRIVATE: the website reads
+-- via short-lived signed URLs, and the folder-prefix policies below keep
+-- each user inside their own {user_id}/ folder.
+insert into storage.buckets (id, name, public)
+values ('dive-photos', 'dive-photos', false)
+on conflict (id) do nothing;
+
+drop policy if exists "dive photos read own" on storage.objects;
+create policy "dive photos read own" on storage.objects
+  for select to authenticated
+  using (bucket_id = 'dive-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "dive photos insert own" on storage.objects;
+create policy "dive photos insert own" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'dive-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "dive photos update own" on storage.objects;
+create policy "dive photos update own" on storage.objects
+  for update to authenticated
+  using (bucket_id = 'dive-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "dive photos delete own" on storage.objects;
+create policy "dive photos delete own" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'dive-photos' and (storage.foldername(name))[1] = auth.uid()::text);
