@@ -59,6 +59,15 @@ create trigger dives_set_updated_at
   for each row execute function moddatetime(updated_at);
 
 -- ---------------------------------------------------------------------------
+-- Table privileges
+-- ---------------------------------------------------------------------------
+-- RLS decides *which rows* a role may touch, but Postgres still needs a
+-- table-level GRANT for the role to reach the table at all. Without this,
+-- inserts fail with "permission denied for table dives" before RLS runs.
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on table dives to authenticated;
+
+-- ---------------------------------------------------------------------------
 -- Row-Level Security
 -- ---------------------------------------------------------------------------
 alter table dives enable row level security;
