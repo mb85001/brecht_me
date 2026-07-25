@@ -44,6 +44,16 @@ import AppLayout from '../../layouts/AppLayout.astro';
     </div>
   </form>
 
+  <!-- Filters. Populated from the loaded dives, so they only ever offer
+       values that actually match something. -->
+  <div class="filters" id="filters" hidden>
+    <select id="f-year" aria-label="Filter by year"><option value="">All years</option></select>
+    <select id="f-country" aria-label="Filter by country"><option value="">All countries</option></select>
+    <select id="f-buddy" aria-label="Filter by buddy"><option value="">All buddies</option></select>
+    <button type="button" class="btn btn-ghost clear" id="clear-filters" hidden>Clear</button>
+    <span class="muted count" id="filter-count"></span>
+  </div>
+
   <ul id="dives" class="dive-list">
     <li class="muted">Loading…</li>
   </ul>
@@ -124,6 +134,34 @@ import AppLayout from '../../layouts/AppLayout.astro';
     }
     .msg.error {
       color: #f87171;
+    }
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .filters select {
+      padding: 0.45rem 0.6rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--surface-border);
+      background: var(--bg-elev);
+      color: var(--text);
+      font: inherit;
+      font-size: var(--step--1);
+    }
+    .filters select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .filters .clear {
+      padding: 0.4rem 0.75rem;
+      font-size: var(--step--1);
+    }
+    .filters .count {
+      font-size: var(--step--1);
+      margin-left: auto;
     }
     .dive-list {
       list-style: none;
@@ -421,6 +459,12 @@ import AppLayout from '../../layouts/AppLayout.astro';
     const el = (id: string) => document.getElementById(id) as HTMLInputElement;
     // Declared after `el` on purpose: these call it, and a `const` used before
     // its declaration throws at load, which left the list stuck on "Loading…".
+    const filtersBar = document.getElementById('filters') as HTMLElement;
+    const yearFilter = document.getElementById('f-year') as HTMLSelectElement;
+    const countryFilter = document.getElementById('f-country') as HTMLSelectElement;
+    const buddyFilter = document.getElementById('f-buddy') as HTMLSelectElement;
+    const clearFilters = document.getElementById('clear-filters') as HTMLButtonElement;
+    const filterCount = document.getElementById('filter-count') as HTMLElement;
     const tagsField = el('f-tags');
     const marineField = el('f-marine');
 
@@ -506,6 +550,16 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
     document.getElementById('cancel-dive')!.addEventListener('click', closeForm);
 
+    for (const select of [yearFilter, countryFilter, buddyFilter]) {
+      select.addEventListener('change', renderList);
+    }
+    clearFilters.addEventListener('click', () => {
+      yearFilter.value = '';
+      countryFilter.value = '';
+      buddyFilter.value = '';
+      renderList();
+    });
+
     // ---- detail dialog actions ----
     document.getElementById('detail-close')!.addEventListener('click', () => detail.close());
     document.getElementById('detail-edit')!.addEventListener('click', () => {
@@ -565,11 +619,92 @@ import AppLayout from '../../layouts/AppLayout.astro';
       }
       dives = data ?? [];
       if (dives.length === 0) {
+        filtersBar.hidden = true;
         list.innerHTML =
           '<li class="muted">No dives yet. Click “New dive” to add one.</li>';
         return;
       }
-      list.innerHTML = dives
+      populateFilters();
+      renderList();
+    }
+
+    /// Fills each filter with the values actually present in the logbook, so a
+    /// selection can never produce an empty list.
+    function populateFilters() {
+      const years = distinct(
+        dives.map((d: any) => (d.date ? String(new Date(d.date).getFullYear()) : ''))
+      ).sort((a, b) => Number(b) - Number(a));
+      const countries = distinct(dives.map((d: any) => countryOf(d))).sort();
+      const buddies = distinct(dives.map((d: any) => d.buddy ?? '')).sort();
+
+      fillSelect(yearFilter, years, 'All years');
+      fillSelect(countryFilter, countries, 'All countries');
+      fillSelect(buddyFilter, buddies, 'All buddies');
+      filtersBar.hidden = false;
+    }
+
+    function fillSelect(select: HTMLSelectElement, values: string[], allLabel: string) {
+      const previous = select.value;
+      select.innerHTML =
+        `<option value="">${allLabel}</option>` +
+        values.map((v) => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+      // Keep the current choice if it still exists after a reload.
+      if (values.includes(previous)) select.value = previous;
+      // A filter with nothing to choose between is just noise.
+      select.hidden = values.length === 0;
+    }
+
+    /// Country is the last part of the location text ("Dahab, South Sinai,
+    /// Egypt"), matching how the app derives it — reverse geocoding writes
+    /// locality, area, country.
+    function countryOf(d: any): string {
+      const parts = String(d.location_detail ?? '')
+        .split(',')
+        .map((v) => v.trim())
+        .filter(Boolean);
+      return parts.length ? parts[parts.length - 1] : '';
+    }
+
+    /// Non-empty, trimmed, deduplicated case-insensitively.
+    function distinct(values: string[]): string[] {
+      const seen = new Set<string>();
+      const out: string[] = [];
+      for (const raw of values) {
+        const value = (raw ?? '').trim();
+        if (!value || seen.has(value.toLowerCase())) continue;
+        seen.add(value.toLowerCase());
+        out.push(value);
+      }
+      return out;
+    }
+
+    function visibleDives(): any[] {
+      const year = yearFilter.value;
+      const country = countryFilter.value.toLowerCase();
+      const buddy = buddyFilter.value.toLowerCase();
+      return dives.filter((d: any) => {
+        if (year && (!d.date || String(new Date(d.date).getFullYear()) !== year)) return false;
+        if (country && countryOf(d).toLowerCase() !== country) return false;
+        if (buddy && (d.buddy ?? '').trim().toLowerCase() !== buddy) return false;
+        return true;
+      });
+    }
+
+    /// Renders the list for the current filters. Dives arrive already sorted
+    /// by date descending from the query.
+    function renderList() {
+      const shown = visibleDives();
+      const filtering = Boolean(yearFilter.value || countryFilter.value || buddyFilter.value);
+      clearFilters.hidden = !filtering;
+      filterCount.textContent = filtering
+        ? `${shown.length} of ${dives.length} dives`
+        : `${dives.length} dive${dives.length === 1 ? '' : 's'}`;
+
+      if (shown.length === 0) {
+        list.innerHTML = '<li class="muted">No dives match these filters.</li>';
+        return;
+      }
+      list.innerHTML = shown
         .map((d: any) => {
           const date = d.date ? new Date(d.date).toLocaleDateString() : '—';
           const bt = d.bottom_time_minutes
