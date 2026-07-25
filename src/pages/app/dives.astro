@@ -289,7 +289,14 @@ import AppLayout from '../../layouts/AppLayout.astro';
         .order('date', { ascending: false });
 
       if (error) {
-        list.innerHTML = `<li class="muted">Could not load dives: ${escapeHtml(error.message)}</li>`;
+        // A missing column means the database schema is behind the app —
+        // say so plainly instead of just showing an empty list.
+        const schemaIssue = /column .* does not exist/i.test(error.message);
+        list.innerHTML = `<li class="muted">Could not load dives: ${escapeHtml(error.message)}${
+          schemaIssue
+            ? '<br />Run <code>supabase/schema.sql</code> in the Supabase SQL editor to add the missing columns.'
+            : ''
+        }</li>`;
         return;
       }
       dives = data ?? [];

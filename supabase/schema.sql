@@ -54,6 +54,17 @@ create table if not exists dives (
   updated_at           timestamptz not null default now()
 );
 
+-- ---------------------------------------------------------------------------
+-- Migrations for databases created before the columns above existed
+-- ---------------------------------------------------------------------------
+-- `create table if not exists` above does NOTHING when the table already
+-- exists, so columns added later must be applied explicitly. Without this,
+-- re-running the script on a live database silently skips them and clients
+-- fail with "column dives.photos does not exist".
+alter table dives add column if not exists external_id text not null default gen_random_uuid()::text;
+alter table dives add column if not exists deleted_at timestamptz;
+alter table dives add column if not exists photos jsonb not null default '[]'::jsonb;
+
 create index if not exists dives_user_date_idx on dives (user_id, date desc);
 create index if not exists dives_user_updated_idx on dives (user_id, updated_at);
 create unique index if not exists dives_user_external_idx
@@ -89,28 +100,6 @@ create policy dives_all on dives
   with check (user_id = auth.uid());
 
 -- ---------------------------------------------------------------------------
--- Tombstone cleanup
--- ---------------------------------------------------------------------------
--- Soft-deleted rows are only kept as markers so other clients can learn of the
--- deletion. Once every device has had a chance to sync, they're dead weight, so
--- a daily pg_cron job hard-deletes tombstones older than 30 days.
---
--- Trade-off: a device that stays offline for more than 30 days may miss the
--- tombstone and could re-upload the dive. 30 days is a safe window for a
--- personal logbook; raise the interval if a device might be dark for longer.
---
--- If `create extension pg_cron` errors, enable pg_cron first via the Supabase
--- dashboard: Database -> Extensions -> pg_cron.
-create extension if not exists pg_cron;
-
--- cron.schedule upserts by job name, so re-running this is safe.
-select cron.schedule(
-  'purge-deleted-dives',
-  '0 3 * * *', -- every day at 03:00 UTC
-  $$ delete from dives where deleted_at is not null and deleted_at < now() - interval '30 days' $$
-);
-
--- ---------------------------------------------------------------------------
 -- Photo thumbnails (private storage bucket)
 -- ---------------------------------------------------------------------------
 -- The app uploads each dive photo's small thumbnail (~300px JPEG) to
@@ -141,3 +130,27 @@ drop policy if exists "dive photos delete own" on storage.objects;
 create policy "dive photos delete own" on storage.objects
   for delete to authenticated
   using (bucket_id = 'dive-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- ===========================================================================
+-- OPTIONAL — tombstone cleanup (keep this LAST)
+-- ===========================================================================
+-- Soft-deleted rows are only kept as markers so other clients can learn of the
+-- deletion. Once every device has had a chance to sync they're dead weight, so
+-- a daily pg_cron job hard-deletes tombstones older than 30 days.
+--
+-- ⚠️ This block is last on purpose: `create extension pg_cron` fails unless the
+-- extension is enabled for the project, and a failing statement aborts the rest
+-- of the script. Everything above must already have run. If it errors, enable
+-- pg_cron via Database -> Extensions, then re-run just this block — or skip it
+-- entirely; tombstones are tiny and sync works fine without the purge.
+--
+-- Trade-off: a device offline for more than 30 days may miss a tombstone and
+-- could re-upload the dive. Raise the interval if a device might be dark longer.
+create extension if not exists pg_cron;
+
+-- cron.schedule upserts by job name, so re-running this is safe.
+select cron.schedule(
+  'purge-deleted-dives',
+  '0 3 * * *', -- every day at 03:00 UTC
+  $$ delete from dives where deleted_at is not null and deleted_at < now() - interval '30 days' $$
+);

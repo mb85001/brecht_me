@@ -15,10 +15,12 @@ import AppLayout from '../../layouts/AppLayout.astro';
       <span class="tile-num" id="dive-count">—</span>
       <span class="tile-label">dives logged</span>
     </a>
-    <div class="card tile">
+    <div class="card tile info">
       <span class="tile-ic">📱</span>
-      <span class="tile-num">Sync</span>
-      <span class="tile-label">shared with the DiveScan app</span>
+      <span class="tile-num">In the app</span>
+      <span class="tile-label">
+        Syncing runs in DiveScan on your phone — there's nothing to press here.
+      </span>
     </div>
   </section>
 
@@ -63,6 +65,16 @@ import AppLayout from '../../layouts/AppLayout.astro';
       font-size: var(--step-2);
       font-weight: 700;
       color: var(--accent);
+    }
+    /* Informational tile — visually distinct from the tappable ones so it
+       doesn't read as a button that does nothing. */
+    .tile.info {
+      background: transparent;
+      border-style: dashed;
+    }
+    .tile.info .tile-num {
+      font-size: var(--step-1);
+      color: var(--text-muted);
     }
     .tile-label {
       color: var(--text-muted);
