@@ -99,11 +99,13 @@ grant select, insert, update, delete on table dives to authenticated;
 alter table dives enable row level security;
 
 -- Dives: full CRUD, but only your own rows.
+-- auth.uid() is wrapped in (select ...) so Postgres evaluates it once per
+-- query instead of once per row (Supabase linter: auth_rls_initplan).
 drop policy if exists dives_all on dives;
 create policy dives_all on dives
   for all
-  using (user_id = auth.uid())
-  with check (user_id = auth.uid());
+  using (user_id = (select auth.uid()))
+  with check (user_id = (select auth.uid()));
 
 -- ---------------------------------------------------------------------------
 -- Photo thumbnails (private storage bucket)
