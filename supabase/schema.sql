@@ -67,8 +67,14 @@ alter table dives add column if not exists photos jsonb not null default '[]'::j
 
 create index if not exists dives_user_date_idx on dives (user_id, date desc);
 create index if not exists dives_user_updated_idx on dives (user_id, updated_at);
-create unique index if not exists dives_user_external_idx
-  on dives (user_id, external_id);
+-- Upsert key. Dropped and recreated rather than `if not exists`, because an
+-- earlier version of this file created it as a PARTIAL index
+-- (`where external_id is not null`) and `if not exists` never rewrites an
+-- existing index. Postgres cannot infer a partial index for
+-- `on conflict (user_id, external_id)` unless the statement repeats the same
+-- predicate, so the app's sync upsert fails with 42P10 against the old one.
+drop index if exists dives_user_external_idx;
+create unique index dives_user_external_idx on dives (user_id, external_id);
 
 -- Keep updated_at honest for every client: bump it on any UPDATE so
 -- last-write-wins sync in the app sees web edits as new.
