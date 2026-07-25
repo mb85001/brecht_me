@@ -40,6 +40,16 @@ import AppLayout from '../../layouts/AppLayout.astro';
     <li class="muted">Loading…</li>
   </ul>
 
+  <!-- Read-only detail view; opened by tapping a dive. -->
+  <dialog class="detail" id="dive-detail">
+    <div class="detail-body" id="detail-body"></div>
+    <div class="detail-actions">
+      <button class="btn btn-primary" id="detail-edit">Edit dive</button>
+      <button class="btn btn-ghost" id="detail-close">Close</button>
+      <button class="btn btn-danger" id="detail-delete">Delete</button>
+    </div>
+  </dialog>
+
   <style>
     .page-head {
       display: flex;
@@ -125,6 +135,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       display: flex;
       flex-direction: column;
       gap: 0.7rem;
+      cursor: pointer;
       padding: 1rem 1.2rem;
       background: var(--bg-elev);
       border: 1px solid var(--surface-border);
@@ -243,6 +254,106 @@ import AppLayout from '../../layouts/AppLayout.astro';
       margin-top: 1rem;
       align-items: center;
     }
+    /* ---------------------------------------------------------------------
+       Detail view
+       --------------------------------------------------------------------- */
+    .detail {
+      width: min(100% - 2rem, 34rem);
+      max-height: 85vh;
+      padding: 0;
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius);
+      background: var(--bg-elev);
+      color: var(--text);
+      overflow: hidden;
+    }
+    .detail::backdrop {
+      background: rgba(3, 10, 18, 0.6);
+      backdrop-filter: blur(3px);
+    }
+    .detail-body {
+      padding: clamp(1.1rem, 0.9rem + 1vw, 1.6rem);
+      overflow-y: auto;
+      max-height: calc(85vh - 4.5rem);
+    }
+    .detail-actions {
+      display: flex;
+      gap: 0.6rem;
+      padding: 0.8rem clamp(1.1rem, 0.9rem + 1vw, 1.6rem);
+      border-top: 1px solid var(--surface-border);
+      background: var(--bg-elev-2);
+    }
+    .btn-danger {
+      margin-left: auto;
+      border: 1px solid var(--surface-border);
+      background: transparent;
+      color: #f87171;
+    }
+    .btn-danger:hover {
+      border-color: #f87171;
+    }
+    /* Detail content is JS-generated — see the note above the .dive-list rules. */
+    .detail-body :global(.detail-title) {
+      font-size: var(--step-2);
+      font-weight: 650;
+      margin: 0 0 0.2rem;
+      letter-spacing: -0.02em;
+    }
+    .detail-body :global(.detail-sub) {
+      color: var(--text-muted);
+      font-size: var(--step--1);
+      margin: 0 0 1.2rem;
+    }
+    .detail-body :global(.detail-grid) {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+      gap: 0.7rem 1rem;
+      margin-bottom: 1.2rem;
+    }
+    .detail-body :global(.detail-cell) {
+      display: grid;
+      gap: 0.1rem;
+      min-width: 0;
+    }
+    .detail-body :global(.detail-label) {
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+    }
+    .detail-body :global(.detail-value) {
+      font-weight: 600;
+      overflow-wrap: anywhere;
+    }
+    .detail-body :global(.detail-section) {
+      margin-bottom: 1.2rem;
+    }
+    .detail-body :global(.detail-section h3) {
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      margin: 0 0 0.4rem;
+      font-weight: 600;
+    }
+    .detail-body :global(.detail-notes) {
+      color: var(--text-muted);
+      white-space: pre-wrap;
+      margin: 0;
+    }
+    .detail-body :global(.detail-photos) {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .detail-body :global(.detail-photos img) {
+      width: 92px;
+      height: 92px;
+      object-fit: cover;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--surface-border);
+    }
+
     /* Also JS-generated — see the note above the .dive-list rules. */
     .form-photos :global(img) {
       width: 44px;
@@ -273,6 +384,10 @@ import AppLayout from '../../layouts/AppLayout.astro';
     const saveBtn = document.getElementById('save-dive')!;
     const notes = document.getElementById('f-notes') as HTMLTextAreaElement;
     const formPhotos = document.getElementById('form-photos') as HTMLElement;
+    const detail = document.getElementById('dive-detail') as HTMLDialogElement;
+    const detailBody = document.getElementById('detail-body') as HTMLElement;
+    /// The dive currently shown in the detail dialog.
+    let detailDiveId: string | null = null;
     const el = (id: string) => document.getElementById(id) as HTMLInputElement;
 
     // Fields the form owns, kept in one place so load(), edit and save agree.
@@ -357,6 +472,29 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
     document.getElementById('cancel-dive')!.addEventListener('click', closeForm);
 
+    // ---- detail dialog actions ----
+    document.getElementById('detail-close')!.addEventListener('click', () => detail.close());
+    document.getElementById('detail-edit')!.addEventListener('click', () => {
+      const dive = dives.find((d) => d.id === detailDiveId);
+      detail.close();
+      if (dive) startEdit(dive);
+    });
+    document.getElementById('detail-delete')!.addEventListener('click', async () => {
+      const id = detailDiveId;
+      if (!id || !confirm('Delete this dive?')) return;
+      detail.close();
+      if (id === editingId) closeForm();
+      await supabase
+        .from('dives')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id);
+      load();
+    });
+    // Clicking the backdrop closes the dialog.
+    detail.addEventListener('click', (e) => {
+      if (e.target === detail) detail.close();
+    });
+
     function startEdit(d: any) {
       editingId = d.id;
       el('f-number').value = d.dive_number ?? '';
@@ -416,6 +554,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
               </div>
               <span class="dive-depth">${d.max_depth_meters ? d.max_depth_meters + ' m' : ''}</span>
               <div class="dive-actions">
+                <button class="icon-btn open" data-id="${d.id}" title="Details" aria-label="Show dive details">›</button>
                 <button class="icon-btn edit" data-id="${d.id}" title="Edit" aria-label="Edit dive">✎</button>
                 <button class="icon-btn del" data-id="${d.id}" title="Delete" aria-label="Delete dive">✕</button>
               </div>
@@ -425,8 +564,26 @@ import AppLayout from '../../layouts/AppLayout.astro';
         })
         .join('');
 
+      // Tapping the row opens the read-only detail; the action buttons stop
+      // propagation so they don't also trigger it.
+      list.querySelectorAll('.dive-item').forEach((li) =>
+        li.addEventListener('click', () => {
+          const id = (li as HTMLElement).dataset.id!;
+          const dive = dives.find((d) => d.id === id);
+          if (dive) showDetail(dive);
+        })
+      );
+      list.querySelectorAll('.open').forEach((b) =>
+        b.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const id = (e.currentTarget as HTMLElement).dataset.id!;
+          const dive = dives.find((d) => d.id === id);
+          if (dive) showDetail(dive);
+        })
+      );
       list.querySelectorAll('.edit').forEach((b) =>
         b.addEventListener('click', (e) => {
+          e.stopPropagation();
           const id = (e.currentTarget as HTMLElement).dataset.id!;
           const dive = dives.find((d) => d.id === id);
           if (dive) startEdit(dive);
@@ -434,6 +591,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       );
       list.querySelectorAll('.del').forEach((b) =>
         b.addEventListener('click', async (e) => {
+          e.stopPropagation();
           const id = (e.currentTarget as HTMLElement).dataset.id!;
           if (!confirm('Delete this dive?')) return;
           if (id === editingId) closeForm();
@@ -537,6 +695,78 @@ import AppLayout from '../../layouts/AppLayout.astro';
       const d = document.createElement('div');
       d.textContent = s;
       return d.innerHTML;
+    }
+
+    /// Read-only detail view for one dive, with Edit / Delete actions.
+    function showDetail(d: any) {
+      detailDiveId = d.id;
+      const num = d.dive_number ? `#${d.dive_number} · ` : '';
+      const date = d.date
+        ? new Date(d.date).toLocaleDateString(undefined, {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+          })
+        : 'No date';
+
+      const cells: string[] = [];
+      const cell = (label: string, value: string | null) => {
+        if (value == null || value === '') return;
+        cells.push(
+          `<div class="detail-cell"><span class="detail-label">${label}</span>` +
+            `<span class="detail-value">${escapeHtml(value)}</span></div>`
+        );
+      };
+
+      cell('Max depth', d.max_depth_meters != null ? `${d.max_depth_meters} m` : null);
+      cell('Bottom time', d.bottom_time_minutes != null ? `${d.bottom_time_minutes} min` : null);
+      cell('Buddy', d.buddy);
+      cell('Water temp', d.water_temp_celsius != null ? `${d.water_temp_celsius} °C` : null);
+      cell('Visibility', d.visibility_meters != null ? `${d.visibility_meters} m` : null);
+      cell('Gas', d.oxygen_percent != null
+        ? (d.oxygen_percent === 21 ? 'Air' : `EAN${d.oxygen_percent}`) : null);
+      cell('Tank pressure', d.start_pressure_bar != null && d.end_pressure_bar != null
+        ? `${d.start_pressure_bar} → ${d.end_pressure_bar} bar` : null);
+      cell('Tank size', d.tank_size_liters != null ? `${d.tank_size_liters} L` : null);
+      cell('Weights', d.weights_kg != null ? `${d.weights_kg} kg` : null);
+      cell('Water type', d.water_type);
+      cell('Exposure suit', d.exposure_suit);
+      cell('Conditions', d.conditions);
+
+      const sac = surfaceAirConsumption(d);
+      if (sac) cell('SAC', `${sac} bar/min`);
+      const mod = maxOperatingDepth(d);
+      if (mod) cell('Max operating depth', `${mod} m`);
+
+      const photos = (d.photos ?? []).filter(
+        (p: any) => p?.path && signedUrlByPath.has(p.path)
+      );
+
+      detailBody.innerHTML =
+        `<p class="detail-title">${num}${escapeHtml(d.site_name ?? 'Untitled site')}</p>` +
+        `<p class="detail-sub">${escapeHtml(date)}${
+          d.location_detail ? ` · ${escapeHtml(d.location_detail)}` : ''
+        }</p>` +
+        (cells.length ? `<div class="detail-grid">${cells.join('')}</div>` : '') +
+        (d.notes
+          ? `<div class="detail-section"><h3>Notes</h3><p class="detail-notes">${escapeHtml(d.notes)}</p></div>`
+          : '') +
+        (photos.length
+          ? `<div class="detail-section"><h3>Photos</h3><div class="detail-photos">${photos
+              .map((p: any) => {
+                const cap = p.caption ? escapeHtml(p.caption) : '';
+                return `<img src="${signedUrlByPath.get(p.path)}" alt="${cap}" title="${cap}" loading="lazy" />`;
+              })
+              .join('')}</div></div>`
+          : '');
+
+      detail.showModal();
+    }
+
+    /// Nitrox MOD at a 1.4 ppO2 limit; null for air or missing data. Mirrors
+    /// DiveAnalysis in the app.
+    function maxOperatingDepth(d: any): string | null {
+      const o2 = d.oxygen_percent;
+      if (o2 == null || o2 <= 21) return null;
+      return ((1.4 / (o2 / 100) - 1) * 10).toFixed(1);
     }
 
     /// Compact chips of a dive's key data. Only fields that were actually
