@@ -114,74 +114,102 @@ import AppLayout from '../../layouts/AppLayout.astro';
       display: grid;
       gap: 0.8rem;
     }
-    .dive-item {
+    /* ---------------------------------------------------------------------
+       Everything below the <ul> is built by JavaScript via innerHTML, so it
+       never carries Astro's data-astro-cid attribute and scoped selectors
+       would silently miss it. These rules use :global() nested under the
+       Astro-rendered .dive-list, which keeps them contained to this list
+       while still matching the generated markup.
+       --------------------------------------------------------------------- */
+    .dive-list :global(.dive-item) {
       display: flex;
       flex-direction: column;
-      gap: 0.8rem;
+      gap: 0.7rem;
       padding: 1rem 1.2rem;
       background: var(--bg-elev);
       border: 1px solid var(--surface-border);
       border-radius: var(--radius);
       transition: border-color 0.2s var(--ease);
     }
-    .dive-item:hover {
+    .dive-list :global(.dive-item:hover) {
       border-color: var(--accent);
     }
-    .dive-row {
+    .dive-list :global(.dive-row) {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 1rem;
     }
-    .dive-photos {
+    .dive-list :global(.dive-photos) {
       display: flex;
-      gap: 0.5rem;
+      gap: 0.4rem;
       overflow-x: auto;
       padding-bottom: 0.2rem;
     }
-    .dive-photos .thumb {
+    .dive-list :global(.dive-photos .thumb) {
       flex: 0 0 auto;
       display: block;
       line-height: 0;
     }
-    .dive-photos .thumb img {
-      width: 68px;
-      height: 68px;
+    .dive-list :global(.dive-photos .thumb img) {
+      width: 44px;
+      height: 44px;
       object-fit: cover;
       border-radius: var(--radius-sm);
       border: 1px solid var(--surface-border);
       transition: border-color 0.2s var(--ease), transform 0.2s var(--ease);
     }
-    .dive-photos .thumb:hover img {
+    .dive-list :global(.dive-photos .thumb:hover img) {
       border-color: var(--accent);
       transform: translateY(-2px);
     }
-    .photos-loading {
+    .dive-list :global(.photos-loading) {
       font-size: 0.78rem;
     }
-    .dive-main {
+    .dive-list :global(.dive-main) {
       display: grid;
       gap: 0.2rem;
+      min-width: 0;
     }
-    .dive-title {
+    .dive-list :global(.dive-title) {
       font-weight: 600;
     }
-    .dive-meta {
+    .dive-list :global(.dive-meta) {
       color: var(--text-muted);
       font-size: var(--step--1);
     }
-    .dive-depth {
+    /* Key dive data, shown as compact chips under the title. */
+    .dive-list :global(.dive-facts) {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-top: 0.15rem;
+    }
+    .dive-list :global(.fact) {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      background: var(--bg-elev-2);
+      border: 1px solid var(--surface-border);
+      border-radius: 999px;
+      padding: 0.12rem 0.5rem;
+      white-space: nowrap;
+    }
+    .dive-list :global(.fact b) {
+      color: var(--text);
+      font-weight: 600;
+    }
+    .dive-list :global(.dive-depth) {
       text-align: right;
       color: var(--accent);
       font-weight: 700;
       white-space: nowrap;
     }
-    .dive-actions {
+    .dive-list :global(.dive-actions) {
       display: flex;
       align-items: center;
       gap: 0.2rem;
     }
-    .icon-btn {
+    .dive-list :global(.icon-btn) {
       background: none;
       border: none;
       color: var(--text-faint);
@@ -191,21 +219,21 @@ import AppLayout from '../../layouts/AppLayout.astro';
       border-radius: var(--radius-sm);
       line-height: 1;
     }
-    .icon-btn.edit:hover {
+    .dive-list :global(.icon-btn.edit:hover) {
       color: var(--accent);
       background: var(--accent-soft);
     }
-    .icon-btn.del:hover {
+    .dive-list :global(.icon-btn.del:hover) {
       color: #f87171;
     }
-    .dive-item.editing {
+    .dive-list :global(.dive-item.editing) {
       border-color: var(--accent);
       box-shadow: 0 0 0 1px var(--accent);
     }
     /* While editing, the dive being edited owns the photo display: its
        thumbnails move into the form, and the other dives' strips are hidden so
        it's unambiguous which photos belong to what you're editing. */
-    .dive-list.editing-mode .dive-photos {
+    .dive-list.editing-mode :global(.dive-photos) {
       display: none;
     }
     .form-photos {
@@ -215,15 +243,16 @@ import AppLayout from '../../layouts/AppLayout.astro';
       margin-top: 1rem;
       align-items: center;
     }
-    .form-photos img {
-      width: 68px;
-      height: 68px;
+    /* Also JS-generated — see the note above the .dive-list rules. */
+    .form-photos :global(img) {
+      width: 44px;
+      height: 44px;
       object-fit: cover;
       border-radius: var(--radius-sm);
       border: 1px solid var(--surface-border);
       flex: 0 0 auto;
     }
-    .form-photos .hint {
+    .form-photos :global(.hint) {
       color: var(--text-faint);
       font-size: 0.78rem;
     }
@@ -249,7 +278,10 @@ import AppLayout from '../../layouts/AppLayout.astro';
     // Fields the form owns, kept in one place so load(), edit and save agree.
     // `photos` is read-only here — the DiveScan app writes it.
     const SELECT =
-      'id, dive_number, date, site_name, max_depth_meters, bottom_time_minutes, buddy, water_temp_celsius, notes, photos';
+      'id, dive_number, date, site_name, location_detail, max_depth_meters, ' +
+      'bottom_time_minutes, buddy, water_temp_celsius, visibility_meters, ' +
+      'oxygen_percent, start_pressure_bar, end_pressure_bar, tank_size_liters, ' +
+      'water_type, exposure_suit, weights_kg, conditions, notes, photos';
 
     let dives: any[] = [];
     // null = the form is in "add" mode; a UUID = editing that dive.
@@ -372,11 +404,15 @@ import AppLayout from '../../layouts/AppLayout.astro';
           const buddy = d.buddy ? ` · with ${escapeHtml(d.buddy)}` : '';
           const num = d.dive_number ? `#${d.dive_number} ` : '';
           const photoCount = Array.isArray(d.photos) ? d.photos.length : 0;
+          const where = d.location_detail
+            ? ` · ${escapeHtml(d.location_detail)}`
+            : '';
           return `<li class="dive-item" data-id="${d.id}">
             <div class="dive-row">
               <div class="dive-main">
                 <span class="dive-title">${num}${escapeHtml(d.site_name ?? 'Untitled site')}</span>
-                <span class="dive-meta">${date}${bt}${buddy}</span>
+                <span class="dive-meta">${date}${bt}${buddy}${where}</span>
+                ${facts(d)}
               </div>
               <span class="dive-depth">${d.max_depth_meters ? d.max_depth_meters + ' m' : ''}</span>
               <div class="dive-actions">
@@ -501,6 +537,45 @@ import AppLayout from '../../layouts/AppLayout.astro';
       const d = document.createElement('div');
       d.textContent = s;
       return d.innerHTML;
+    }
+
+    /// Compact chips of a dive's key data. Only fields that were actually
+    /// recorded appear, so a sparsely-filled dive doesn't render empty chips.
+    function facts(d: any): string {
+      const chips: string[] = [];
+      const add = (label: string, value: string) =>
+        chips.push(`<span class="fact">${label} <b>${escapeHtml(value)}</b></span>`);
+
+      if (d.water_temp_celsius != null) add('Water', `${d.water_temp_celsius} °C`);
+      if (d.visibility_meters != null) add('Vis', `${d.visibility_meters} m`);
+      if (d.oxygen_percent != null) {
+        add('Gas', d.oxygen_percent === 21 ? 'Air' : `EAN${d.oxygen_percent}`);
+      }
+      if (d.start_pressure_bar != null && d.end_pressure_bar != null) {
+        add('Tank', `${d.start_pressure_bar}→${d.end_pressure_bar} bar`);
+      }
+      if (d.tank_size_liters != null) add('Size', `${d.tank_size_liters} L`);
+      if (d.weights_kg != null) add('Weights', `${d.weights_kg} kg`);
+      if (d.water_type) add('Water type', d.water_type);
+      if (d.exposure_suit) add('Suit', d.exposure_suit);
+      if (d.conditions) add('Conditions', d.conditions);
+
+      // Surface Air Consumption, when there's enough data — the number divers
+      // actually compare between dives. Mirrors DiveAnalysis in the app.
+      const sac = surfaceAirConsumption(d);
+      if (sac) add('SAC', `${sac} bar/min`);
+
+      return chips.length ? `<span class="dive-facts">${chips.join('')}</span>` : '';
+    }
+
+    function surfaceAirConsumption(d: any): string | null {
+      const { start_pressure_bar: s, end_pressure_bar: e } = d;
+      const t = d.bottom_time_minutes;
+      const depth = d.max_depth_meters;
+      if (s == null || e == null || t == null || depth == null) return null;
+      if (s <= e || t <= 0 || depth < 0) return null;
+      const ata = depth / 10 + 1;
+      return ((s - e) / t / ata).toFixed(2);
     }
 
     load();
