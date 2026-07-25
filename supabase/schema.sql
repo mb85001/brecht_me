@@ -64,6 +64,10 @@ create table if not exists dives (
 alter table dives add column if not exists external_id text not null default gen_random_uuid()::text;
 alter table dives add column if not exists deleted_at timestamptz;
 alter table dives add column if not exists photos jsonb not null default '[]'::jsonb;
+-- How the dive is categorized ("wreck", "night", "drift") and what was seen.
+-- Arrays of strings, stored as jsonb to match `photos`.
+alter table dives add column if not exists tags jsonb not null default '[]'::jsonb;
+alter table dives add column if not exists marine_life jsonb not null default '[]'::jsonb;
 
 create index if not exists dives_user_date_idx on dives (user_id, date desc);
 create index if not exists dives_user_updated_idx on dives (user_id, updated_at);

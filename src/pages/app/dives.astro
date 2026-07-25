@@ -26,6 +26,14 @@ import AppLayout from '../../layouts/AppLayout.astro';
       <label>Bottom time (min)<input type="number" id="f-bottom" min="0" /></label>
       <label>Buddy<input type="text" id="f-buddy" /></label>
       <label>Water temp (°C)<input type="number" id="f-temp" step="0.1" /></label>
+      <label class="span2">
+        Type of dive
+        <input type="text" id="f-tags" placeholder="wreck, night, drift" />
+      </label>
+      <label class="span2">
+        Marine life
+        <input type="text" id="f-marine" placeholder="turtle, reef shark" />
+      </label>
       <label class="span2">Notes<textarea id="f-notes" rows="2"></textarea></label>
     </div>
     <div class="form-photos" id="form-photos" hidden></div>
@@ -209,6 +217,14 @@ import AppLayout from '../../layouts/AppLayout.astro';
       color: var(--text);
       font-weight: 600;
     }
+    /* Type-of-dive chips read as labels rather than measurements, so they get
+       the accent treatment to stand apart from the numeric facts. */
+    .dive-list :global(.fact.type) {
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-color: transparent;
+      font-weight: 600;
+    }
     .dive-list :global(.dive-depth) {
       text-align: right;
       color: var(--accent);
@@ -336,6 +352,20 @@ import AppLayout from '../../layouts/AppLayout.astro';
       margin: 0 0 0.4rem;
       font-weight: 600;
     }
+    .detail-body :global(.detail-chips) {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+    .detail-body :global(.detail-chips .fact) {
+      font-size: 0.78rem;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border: 1px solid transparent;
+      border-radius: 999px;
+      padding: 0.15rem 0.6rem;
+      font-weight: 600;
+    }
     .detail-body :global(.detail-notes) {
       color: var(--text-muted);
       white-space: pre-wrap;
@@ -383,6 +413,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
     const legend = document.getElementById('form-legend')!;
     const saveBtn = document.getElementById('save-dive')!;
     const notes = document.getElementById('f-notes') as HTMLTextAreaElement;
+    const tagsField = el('f-tags');
+    const marineField = el('f-marine');
     const formPhotos = document.getElementById('form-photos') as HTMLElement;
     const detail = document.getElementById('dive-detail') as HTMLDialogElement;
     const detailBody = document.getElementById('detail-body') as HTMLElement;
@@ -396,7 +428,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       'id, dive_number, date, site_name, location_detail, max_depth_meters, ' +
       'bottom_time_minutes, buddy, water_temp_celsius, visibility_meters, ' +
       'oxygen_percent, start_pressure_bar, end_pressure_bar, tank_size_liters, ' +
-      'water_type, exposure_suit, weights_kg, conditions, notes, photos';
+      'water_type, exposure_suit, weights_kg, conditions, notes, photos, tags, marine_life';
 
     let dives: any[] = [];
     // null = the form is in "add" mode; a UUID = editing that dive.
@@ -505,6 +537,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
       el('f-buddy').value = d.buddy ?? '';
       el('f-temp').value = d.water_temp_celsius ?? '';
       notes.value = d.notes ?? '';
+      tagsField.value = (d.tags ?? []).join(', ');
+      marineField.value = (d.marine_life ?? []).join(', ');
       openForm('edit');
       form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
@@ -673,6 +707,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
         buddy: el('f-buddy').value || null,
         water_temp_celsius: num(el('f-temp').value),
         notes: notes.value || null,
+        tags: splitList(tagsField.value),
+        marine_life: splitList(marineField.value),
       };
 
       // Editing bumps updated_at (via the DB trigger), so the app picks the
@@ -690,6 +726,15 @@ import AppLayout from '../../layouts/AppLayout.astro';
       closeForm();
       load();
     });
+
+    /// Comma-separated text to a clean string array (the app stores these as
+    /// arrays; the form edits them as one line).
+    function splitList(value: string): string[] {
+      return value
+        .split(',')
+        .map((v) => v.trim())
+        .filter((v) => v.length > 0);
+    }
 
     function escapeHtml(s: string) {
       const d = document.createElement('div');
@@ -746,6 +791,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
           d.location_detail ? ` · ${escapeHtml(d.location_detail)}` : ''
         }</p>` +
         (cells.length ? `<div class="detail-grid">${cells.join('')}</div>` : '') +
+        listSection('Type of dive', d.tags) +
+        listSection('Marine life', d.marine_life) +
         (d.notes
           ? `<div class="detail-section"><h3>Notes</h3><p class="detail-notes">${escapeHtml(d.notes)}</p></div>`
           : '') +
@@ -759,6 +806,15 @@ import AppLayout from '../../layouts/AppLayout.astro';
           : '');
 
       detail.showModal();
+    }
+
+    /// A detail section rendering a string array as chips, omitted when empty.
+    function listSection(title: string, values: string[] | null | undefined): string {
+      if (!values || values.length === 0) return '';
+      const chips = values
+        .map((v) => `<span class="fact type">${escapeHtml(v)}</span>`)
+        .join('');
+      return `<div class="detail-section"><h3>${escapeHtml(title)}</h3><div class="detail-chips">${chips}</div></div>`;
     }
 
     /// Nitrox MOD at a 1.4 ppO2 limit; null for air or missing data. Mirrors
@@ -776,6 +832,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
       const add = (label: string, value: string) =>
         chips.push(`<span class="fact">${label} <b>${escapeHtml(value)}</b></span>`);
 
+      for (const tag of d.tags ?? []) {
+        chips.push(`<span class="fact type">${escapeHtml(tag)}</span>`);
+      }
       if (d.water_temp_celsius != null) add('Water', `${d.water_temp_celsius} °C`);
       if (d.visibility_meters != null) add('Vis', `${d.visibility_meters} m`);
       if (d.oxygen_percent != null) {
