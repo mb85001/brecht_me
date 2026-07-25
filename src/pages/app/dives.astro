@@ -413,14 +413,16 @@ import AppLayout from '../../layouts/AppLayout.astro';
     const legend = document.getElementById('form-legend')!;
     const saveBtn = document.getElementById('save-dive')!;
     const notes = document.getElementById('f-notes') as HTMLTextAreaElement;
-    const tagsField = el('f-tags');
-    const marineField = el('f-marine');
     const formPhotos = document.getElementById('form-photos') as HTMLElement;
     const detail = document.getElementById('dive-detail') as HTMLDialogElement;
     const detailBody = document.getElementById('detail-body') as HTMLElement;
     /// The dive currently shown in the detail dialog.
     let detailDiveId: string | null = null;
     const el = (id: string) => document.getElementById(id) as HTMLInputElement;
+    // Declared after `el` on purpose: these call it, and a `const` used before
+    // its declaration throws at load, which left the list stuck on "Loading…".
+    const tagsField = el('f-tags');
+    const marineField = el('f-marine');
 
     // Fields the form owns, kept in one place so load(), edit and save agree.
     // `photos` is read-only here — the DiveScan app writes it.
