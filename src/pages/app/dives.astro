@@ -28,6 +28,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       <label>Water temp (°C)<input type="number" id="f-temp" step="0.1" /></label>
       <label class="span2">Notes<textarea id="f-notes" rows="2"></textarea></label>
     </div>
+    <div class="form-photos" id="form-photos" hidden></div>
     <div class="form-actions">
       <button type="submit" class="btn btn-primary" id="save-dive">Save dive</button>
       <button type="button" class="btn btn-ghost" id="cancel-dive">Cancel</button>
@@ -201,6 +202,31 @@ import AppLayout from '../../layouts/AppLayout.astro';
       border-color: var(--accent);
       box-shadow: 0 0 0 1px var(--accent);
     }
+    /* While editing, the dive being edited owns the photo display: its
+       thumbnails move into the form, and the other dives' strips are hidden so
+       it's unambiguous which photos belong to what you're editing. */
+    .dive-list.editing-mode .dive-photos {
+      display: none;
+    }
+    .form-photos {
+      display: flex;
+      gap: 0.5rem;
+      overflow-x: auto;
+      margin-top: 1rem;
+      align-items: center;
+    }
+    .form-photos img {
+      width: 68px;
+      height: 68px;
+      object-fit: cover;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--surface-border);
+      flex: 0 0 auto;
+    }
+    .form-photos .hint {
+      color: var(--text-faint);
+      font-size: 0.78rem;
+    }
     @media (max-width: 560px) {
       .grid {
         grid-template-columns: 1fr;
@@ -217,6 +243,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     const legend = document.getElementById('form-legend')!;
     const saveBtn = document.getElementById('save-dive')!;
     const notes = document.getElementById('f-notes') as HTMLTextAreaElement;
+    const formPhotos = document.getElementById('form-photos') as HTMLElement;
     const el = (id: string) => document.getElementById(id) as HTMLInputElement;
 
     // Fields the form owns, kept in one place so load(), edit and save agree.
@@ -227,6 +254,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
     let dives: any[] = [];
     // null = the form is in "add" mode; a UUID = editing that dive.
     let editingId: string | null = null;
+    /// Signed thumbnail URLs by storage path, shared between the dive list and
+    /// the edit form so the form doesn't have to re-sign them.
+    const signedUrlByPath = new Map<string, string>();
 
     function openForm(mode: 'new' | 'edit') {
       form.hidden = false;
@@ -251,6 +281,34 @@ import AppLayout from '../../layouts/AppLayout.astro';
           editingId !== null && (li as HTMLElement).dataset.id === editingId
         );
       });
+      // Hide every dive's photo strip while editing; the edited dive's photos
+      // are shown in the form instead, so there's no ambiguity about which
+      // thumbnails belong to what's being edited.
+      list.classList.toggle('editing-mode', editingId !== null);
+      renderFormPhotos();
+    }
+
+    /// Shows the photos of the dive currently being edited, inside the form.
+    function renderFormPhotos() {
+      const dive = dives.find((d) => d.id === editingId);
+      const photos = (dive?.photos ?? []).filter(
+        (p: any) => p?.path && signedUrlByPath.has(p.path)
+      );
+      if (!dive || photos.length === 0) {
+        formPhotos.hidden = true;
+        formPhotos.innerHTML = '';
+        return;
+      }
+      formPhotos.hidden = false;
+      formPhotos.innerHTML =
+        photos
+          .map((p: any) => {
+            const url = signedUrlByPath.get(p.path)!;
+            const cap = p.caption ? escapeHtml(p.caption) : '';
+            return `<img src="${url}" alt="${cap}" title="${cap}" loading="lazy" />`;
+          })
+          .join('') +
+        '<span class="hint">Photos are managed in the DiveScan app.</span>';
     }
 
     document.getElementById('new-dive')!.addEventListener('click', () => {
@@ -359,20 +417,24 @@ import AppLayout from '../../layouts/AppLayout.astro';
     // The bucket is private, so thumbnails need short-lived signed URLs. Sign
     // every photo path in one batch, then drop the images into each dive row.
     async function renderPhotos() {
+      signedUrlByPath.clear();
       const paths: string[] = [];
       for (const d of dives) {
         for (const p of d.photos ?? []) {
           if (p?.path) paths.push(p.path);
         }
       }
-      if (paths.length === 0) return;
+      if (paths.length === 0) {
+        renderFormPhotos();
+        return;
+      }
 
       const { data: signed, error } = await supabase.storage
         .from('dive-photos')
         .createSignedUrls(paths, 3600);
       if (error || !signed) return;
 
-      const urlByPath = new Map<string, string>();
+      const urlByPath = signedUrlByPath;
       for (const s of signed) {
         if (s.signedUrl && !s.error && s.path) urlByPath.set(s.path, s.signedUrl);
       }
@@ -393,6 +455,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
           })
           .join('');
       }
+      // The form's strip needs the URLs too, and they only exist now.
+      renderFormPhotos();
     }
 
     form.addEventListener('submit', async (e) => {
