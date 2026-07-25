@@ -43,8 +43,30 @@ npm run dev               # http://localhost:4321
 3. Put both in your local `.env` (see `.env.example`).
 
 ### 2. Create the tables + security policies
-1. In Supabase, open **SQL Editor → New query**.
-2. Paste the contents of [`supabase/schema.sql`](supabase/schema.sql) and click **Run**.
+
+The schema lives in `supabase/migrations/` and is applied with the Supabase
+CLI, so the database's state is versioned rather than depending on remembering
+which script was run.
+
+```bash
+brew install supabase/tap/supabase   # once
+supabase login                       # once, opens a browser
+supabase link --project-ref YOUR-PROJECT-REF
+supabase db push                     # applies any unapplied migrations
+```
+
+Your project ref is the subdomain of the project URL —
+`https://<ref>.supabase.co`.
+
+To change the schema, add a new file to `supabase/migrations/` (name it
+`<YYYYMMDDHHMMSS>_what_changed.sql`) and run `supabase db push` again. Migrations
+are written idempotently (`if not exists`, `drop … if exists`) so re-running is
+harmless.
+
+`supabase/optional/tombstone-cleanup.sql` is deliberately *not* a migration: it
+needs the `pg_cron` extension enabled for the project, and a failing statement
+would abort an entire migration run. Run it by hand in the SQL Editor if you
+want the daily purge of soft-deleted rows.
 
 ### 3. Auth settings — invite only
 
@@ -88,12 +110,12 @@ This cannot be done from the website itself: creating users requires the
 
 ---
 
-## Connecting the DiveScan app (later)
+## The DiveScan app
 
-The `dives` table matches the app's `DiveExportData`. A future
-`SupabaseSyncTarget` in the iOS app can `upsert` into `dives` keyed on
-`(user_id, external_id)` so scanning a log on the phone shows up here, and vice
-versa. That's phase two — the schema is already shaped for it.
+The iOS app syncs against this same `dives` table, upserting on
+`(user_id, external_id)`. Dives, edits and deletions flow both ways; photo
+thumbnails go app → website into the private `dive-photos` bucket and are shown
+here via signed URLs.
 
 ## Project structure
 
@@ -108,5 +130,5 @@ src/
       dives.astro      dive logbook
   lib/supabase.ts      client + requireSession() route guard
   styles/global.css    design tokens
-supabase/schema.sql    tables + RLS (run once)
+supabase/migrations/   schema, applied with `supabase db push`
 ```
